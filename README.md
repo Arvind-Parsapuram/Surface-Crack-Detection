@@ -1,3 +1,18 @@
+---
+title: Surface Crack Detection
+emoji: 🚀
+colorFrom: red
+colorTo: red
+sdk: streamlit
+sdk_version: "1.58.0"
+app_file: app.py
+pinned: false
+tags:
+- streamlit
+- computer-vision
+- deep-learning
+---
+
 # 🏗️ Surface Crack Detection
 
 > **Bootcamp Project** — Multi-class classification of road/bridge surface defects using Computer Vision  
@@ -64,23 +79,28 @@ Raw Images (306, varied resolutions)
 
 ```
 bootcamp/
-├── data/                        # Processed dataset (train/val/test)
-├── src/                         # Source code
-│   ├── config.py                # Hyperparameters
-│   ├── dataset.py               # Dataset + transforms
-│   ├── model.py                 # ResNet50 / baseline CNN
-│   ├── train.py                 # Training loop
-│   ├── evaluate.py              # Evaluation + metrics
-│   ├── utils.py                 # Helpers
-│   └── prepare_data.py          # Data splitting
+├── app.py                        # Streamlit entry point
+├── pages/                        # Streamlit pages
+├── backend/                      # Backend logic (auth, prediction)
+├── data/                         # Processed dataset (train/val/test)
+├── src/                          # Source code
+│   ├── config.py                 # Hyperparameters
+│   ├── dataset.py                # Dataset + transforms
+│   ├── model.py                  # ResNet50 / baseline CNN
+│   ├── train.py                  # Training loop
+│   ├── evaluate.py               # Evaluation + metrics
+│   ├── utils.py                  # Helpers
+│   └── prepare_data.py           # Data splitting
 ├── notebooks/
-│   ├── 01_eda.ipynb             # Exploratory Data Analysis
-│   └── 02_results.ipynb         # Results visualization
-├── models/                      # Saved checkpoints
-├── reports/                     # Figures, logs, metrics
-├── PLAN.md                      # Technical plan
-├── TEAM_ROADMAP.md              # Team roles & sprint plan
-└── README.md                    # ← You are here
+│   ├── 01_eda.ipynb              # Exploratory Data Analysis
+│   └── 02_results.ipynb          # Results visualization
+├── models/                       # Saved checkpoints
+├── reports/                      # Figures, logs, metrics
+├── migrations/                   # Database migrations
+├── Dockerfile                    # Docker support
+├── PLAN.md                       # Technical plan
+├── TEAM_ROADMAP.md               # Team roles & sprint plan
+└── README.md                     # ← You are here
 ```
 
 ---
@@ -89,17 +109,30 @@ bootcamp/
 
 ```bash
 # 1. Install dependencies
-pip install torch torchvision matplotlib seaborn scikit-learn pandas jupyter
+pip install -r requirements.txt
 
-# 2. Prepare dataset (stratified split)
+# 2. Run Streamlit app
+streamlit run app.py
+
+# 3. Prepare dataset (stratified split)
 python src/prepare_data.py
-
-# 3. Run EDA notebook
-jupyter notebook notebooks/01_eda.ipynb
 
 # 4. Train model
 python src/train.py
 
 # 5. Evaluate
 python src/evaluate.py
+```
+
+---
+
+## 🌐 Deploy
+
+**Hugging Face Spaces** (Streamlit SDK) — no sleep, free tier:  
+`https://huggingface.co/spaces/amruthjakku/surface-crack-detection`
+
+**Alternative:** Docker — build and run:
+```bash
+docker build -t crack-detection .
+docker run -p 8501:8501 crack-detection
 ```
