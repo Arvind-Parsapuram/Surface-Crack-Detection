@@ -43,6 +43,9 @@ Surface Crack Detection/
 # Generated reports, figures, logs
 reports/*
 !reports/.gitkeep
+!reports/classification_report.txt
+!reports/confusion_matrix.png
+!reports/training_curves.png
 
 # Generated data archives
 *.zip
