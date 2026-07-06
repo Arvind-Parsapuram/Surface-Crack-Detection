@@ -14,6 +14,7 @@
 | Day 1 | Sprint Planning | Understood project objectives and scope | Conducted Sprint Planning meeting and coordinated team | Discussed project requirements | Submitted project requirements to the team | - |
 | Day 2 | Sprint Planning | Assigned tasks to all team members | Divided sprint into tasks and scheduled work | Prepared technical documentation | Submitted technical documentation | - |
 | Day 3 | Sprint Execution | Monitored work progress and reviewed project folder structure | Created GitHub issues, monitored team progress, tracked task completion, and closed completed issues | Developed Login UI | Reviewed and developed Login UI progress | Created Supabase database schema for the login page |
+| Day 4 | Sprint Execution | Created foundation for model,and project structure | Updated Scrum documentation,performed EDA for dataset| Continued Login UI development and frontend integration | Reviewed progress and validated completed tasks against project requirements | Continued database integration and supported frontend connectivity |
 
 ---
 
