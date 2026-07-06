@@ -131,4 +131,4 @@ left, center, right = st.columns([3, 2, 3])
 
 with center:
     if st.button("Login", use_container_width=True):
-        st.switch_page("pages/LOgin.py")
+        st.switch_page("pages/login.py")

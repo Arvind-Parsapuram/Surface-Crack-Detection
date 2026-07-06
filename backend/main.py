@@ -7,7 +7,7 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
-@app.post("/login")
+@app.post("/")
 def login(user: LoginRequest):
     if user.email == "admin@surfacedetect.com" and user.password == "Admin@123":
         return {
