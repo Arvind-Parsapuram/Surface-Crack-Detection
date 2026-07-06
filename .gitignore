@@ -44,6 +44,9 @@ Surface Crack Detection/
 reports/*
 !reports/.gitkeep
 
+# Generated data archives
+*.zip
+
 # Other tools
 .astrivya
 
