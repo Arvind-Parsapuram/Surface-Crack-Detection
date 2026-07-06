@@ -33,6 +33,17 @@ def _load_model():
     ])
 
     _model = get_resnet50(num_classes=Config.NUM_CLASSES, pretrained=False)
+    if not os.path.exists(MODEL_PATH):
+        try:
+            from huggingface_hub import hf_hub_download
+            hf_hub_download(
+                repo_id="amruthjakku/surface-crack-detection-model",
+                filename="best_model.pth",
+                local_dir="models"
+            )
+        except Exception:
+            pass
+
     if os.path.exists(MODEL_PATH):
         import torch
         _model.load_state_dict(torch.load(MODEL_PATH, map_location=Config.DEVICE))
