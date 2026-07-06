@@ -1,3 +1,6 @@
+# Use CPU-only PyTorch index (HF Spaces has no GPU — wheels are ~120MB vs 532MB)
+--extra-index-url https://download.pytorch.org/whl/cpu
+
 # Backend
 fastapi==0.139.0
 uvicorn==0.50.0
@@ -19,4 +22,3 @@ seaborn==0.13.2
 scikit-learn==1.9.0
 pandas==3.0.3
 numpy==2.5.0
-jupyter==1.1.1
