@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.env.local
+.git/
+.gitignore
+Surface Crack Detection/
+notebooks/
+reports/
+README.md
+PLAN.md
+TEAM_ROADMAP.md
