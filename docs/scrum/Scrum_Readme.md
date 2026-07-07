@@ -18,6 +18,14 @@
 | Day 5 | Sprint Execution | wired login - homepage and backend with database ,trained intial model,deployed using HuggingFace,pre-release inital version |Conducted standup, Set up and debugged the initial Streamlit E2E login tests.| Solved UI issues and did API integrtion | Solved UI issues and did API integrtion | Completed EDA and database for login |  
 ---
 
+# Sprint 2 - Scrum Documentation
+
+
+| Day | Event | Team Lead | Scrum Master | Product Owner | Business Owner | Developer |
+|-----|-------|-----------|---------------|----------------|----------------|-----------|
+| Day 6 | Sprint execution | Traning model, assisted team | Prepared E2E scripts,gave sprint board demo ,working on #14 issue| Prepared and gave sprint review and product demo | Added logout feature,working on data proceessing of home page | Audit authentucation work,documentation,created issues and woking on #15 issue|
+
+
 ## Scrum Master's Responsibilities
 
 - Conducted Sprint Planning.
@@ -41,6 +49,7 @@
 | Login UI |✅ Completed  |
 | Database Schema | ✅ Completed |
 | Dataset Analysis | ✅ Completed |
+
 
 ---
 
