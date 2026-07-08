@@ -24,7 +24,7 @@
 | Day | Event | Team Lead | Scrum Master | Product Owner | Business Owner | Developer |
 |-----|-------|-----------|---------------|----------------|----------------|-----------|
 | Day 6 | Sprint execution | Traning model, assisted team | Prepared E2E scripts,gave sprint board demo ,working on #14 issue| Prepared and gave sprint review and product demo | Added logout feature,working on data proceessing of home page | Audit authentucation work,documentation,created issues and woking on #15 issue|
-
+| Day 7| sprint execution | focused on dockerising the product,vadilated current features and assisted ci pipelines| Worked on issues ,conducted stand up and monitored team progess |Reviewed the backend API connection and created single command to run whole project | Working on #13 issue and coorperated with team| Working on #15 issue and coorporated with the team|   
 
 ## Scrum Master's Responsibilities
 
@@ -53,4 +53,4 @@
 
 ---
 
-**Last Updated:** Day 5
+**Last Updated:** Day 7
