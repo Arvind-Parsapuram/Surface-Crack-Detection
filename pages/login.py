@@ -1,41 +1,36 @@
-import streamlit as st
-from backend.auth import login_user
-
-st.set_page_config(
-    page_title="Surface Detection System - Login",
-    page_icon="🔐",
-    initial_sidebar_state="collapsed"
-)
-
+import streamlit as st 
 st.markdown("""
 <style>
-[data-testid="stSidebar"] { display: none; }
+[data-testid="stSidebar"] {
+    display: none;
+}
+
+.login-box {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0px 0px 12px rgba(0,0,0,0.15);
+}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🛣️ Surface Detection System")
-st.subheader("Login")
+left, center, right = st.columns([6,6,6])
 
-email = st.text_input("Email")
-password = st.text_input("Password", type="password")
+with center:
+    st.markdown('<div class="login-box">', unsafe_allow_html=True)
 
-if st.button("Login", use_container_width=True):
-    if not email or not password:
-        st.error("Please enter both email and password.")
-    else:
-        try:
-            result = login_user(email=email, password=password)
-            if result.get("success"):
-                st.session_state["access_token"] = result["access_token"]
-                st.session_state["user"] = result["user"]
-                st.success("Login Successful ✅")
-                st.switch_page("pages/Home.py")
-            else:
-                st.error("Invalid email or password")
-        except Exception as e:
-            st.error(str(e))
+    st.title("🛣️ Surface Detection System")
+    st.subheader("Login")
 
-st.write("---")
+
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login", use_container_width=True):
+        # login logic
+        pass
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
 with col1:

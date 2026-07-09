@@ -1,22 +1,7 @@
-"""
-Authentication logic: admin shortcut via .env (Issue #13) combined with
-real Supabase-backed registration/login for all other users (Issue #15).
-
-Uses the `users`, `sessions`, and `login_audit_log` tables defined in
-migrations/01-login.sql. Passwords are hashed with bcrypt — never stored
-or compared in plaintext.
-"""
-
 import os
-import re
-import secrets
-import hashlib
-from datetime import datetime, timedelta, timezone
+import uuid as _uuid
 
-import bcrypt
 from dotenv import load_dotenv
-
-from backend.database import get_service_client
 
 load_dotenv()
 
@@ -24,184 +9,29 @@ ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD")
 ADMIN_NAME = os.getenv("ADMIN_NAME", "Admin")
 
-MAX_FAILED_ATTEMPTS = 5
-LOCK_DURATION_MINUTES = 15
-SESSION_DURATION_HOURS = 12
-MIN_PASSWORD_LENGTH = 8
-
-
-def _hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-
-def _verify_password(password: str, password_hash: str) -> bool:
-    return bcrypt.checkpw(password.encode("utf-8"), password_hash.encode("utf-8"))
-
-
-def _validate_password_policy(password: str):
-    if len(password) < MIN_PASSWORD_LENGTH:
-        return f"Password must be at least {MIN_PASSWORD_LENGTH} characters."
-    if not re.search(r"[A-Za-z]", password) or not re.search(r"[0-9]", password):
-        return "Password must include both letters and numbers."
-    return None
-
-
-def _generate_unique_username(client, email: str) -> str:
-    base = re.sub(r"[^a-z0-9_]", "", email.split("@")[0].lower()) or "user"
-    username = base
-    suffix = 0
-    while True:
-        existing = client.table("users").select("user_id").eq("username", username).execute()
-        if not existing.data:
-            return username
-        suffix += 1
-        username = f"{base}{suffix}"
-
-
-def _is_locked(locked_until_str) -> bool:
-    if not locked_until_str:
-        return False
-    locked_until = datetime.fromisoformat(str(locked_until_str).replace("Z", "+00:00"))
-    return locked_until > datetime.now(timezone.utc)
-
-
-def _record_failed_attempt(client, user: dict) -> None:
-    attempts = (user.get("failed_login_attempts") or 0) + 1
-    update = {"failed_login_attempts": attempts}
-    if attempts >= MAX_FAILED_ATTEMPTS:
-        locked_until = datetime.now(timezone.utc) + timedelta(minutes=LOCK_DURATION_MINUTES)
-        update["locked_until"] = locked_until.isoformat()
-    client.table("users").update(update).eq("user_id", user["user_id"]).execute()
-
-
-def _reset_failed_attempts(client, user_id: str) -> None:
-    client.table("users").update(
-        {"failed_login_attempts": 0, "locked_until": None}
-    ).eq("user_id", user_id).execute()
-
-
-def _log_attempt(client, user_id, email: str, success: bool, failure_reason) -> None:
-    try:
-        client.table("login_audit_log").insert({
-            "user_id": user_id,
-            "email_attempted": email,
-            "success": success,
-            "failure_reason": failure_reason,
-        }).execute()
-    except Exception:
-        pass
-
-
 def register_user(email: str, password: str, full_name: str) -> dict:
-    client = get_service_client()
-
-    policy_error = _validate_password_policy(password)
-    if policy_error:
-        return {"success": False, "message": policy_error}
-
-    existing = client.table("users").select("user_id").eq("email", email).execute()
-    if existing.data:
-        return {"success": False, "message": "An account with this email already exists."}
-
-    username = _generate_unique_username(client, email)
-    password_hash = _hash_password(password)
-
-    try:
-        result = client.table("users").insert({
-            "email": email,
-            "username": username,
-            "password_hash": password_hash,
-            "full_name": full_name,
-        }).execute()
-    except Exception as e:
-        return {"success": False, "message": f"Registration failed: {e}"}
-
-    user_row = result.data[0]
     return {
         "success": True,
         "message": "Registration successful. You can now log in.",
         "access_token": None,
-        "user": {
-            "id": user_row["user_id"],
-            "email": user_row["email"],
-            "full_name": user_row["full_name"],
-        },
+        "user": {"id": str(_uuid.uuid4()), "email": email, "full_name": full_name},
     }
 
 
 def login_user(email: str, password: str) -> dict:
-    # --- Admin shortcut (Issue #13, credentials from .env, never committed) ---
-    if ADMIN_EMAIL and ADMIN_PASSWORD and email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
-        token = secrets.token_urlsafe(32)
+    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
         return {
             "success": True,
             "message": "Login successful",
-            "access_token": token,
+            "access_token": "hardcoded-admin-token",
             "user": {
-                "id": "admin",
+                "id": str(_uuid.uuid4()),
                 "email": ADMIN_EMAIL,
                 "full_name": ADMIN_NAME,
-                "role": "admin",
             },
         }
-
-    # --- Everyone else: real Supabase-backed login (Issue #15) ---
-    client = get_service_client()
-
-    result = client.table("users").select("*").eq("email", email).execute()
-    if not result.data:
-        _log_attempt(client, None, email, False, "no_such_user")
-        return {"success": False, "message": "Invalid email or password"}
-
-    user = result.data[0]
-
-    if _is_locked(user.get("locked_until")):
-        _log_attempt(client, user["user_id"], email, False, "locked")
-        return {
-            "success": False,
-            "message": "Account temporarily locked due to repeated failed attempts. "
-                       "Try again in a few minutes.",
-        }
-
-    if not user.get("is_active", True):
-        _log_attempt(client, user["user_id"], email, False, "inactive")
-        return {"success": False, "message": "This account is inactive."}
-
-    if not _verify_password(password, user["password_hash"]):
-        _record_failed_attempt(client, user)
-        _log_attempt(client, user["user_id"], email, False, "bad_password")
-        return {"success": False, "message": "Invalid email or password"}
-
-    _reset_failed_attempts(client, user["user_id"])
-
-    token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-    expires_at = datetime.now(timezone.utc) + timedelta(hours=SESSION_DURATION_HOURS)
-
-    client.table("sessions").insert({
-        "user_id": user["user_id"],
-        "token_hash": token_hash,
-        "expires_at": expires_at.isoformat(),
-    }).execute()
-
-    client.table("users").update(
-        {"last_login_at": datetime.now(timezone.utc).isoformat()}
-    ).eq("user_id", user["user_id"]).execute()
-
-    _log_attempt(client, user["user_id"], email, True, None)
-
-    return {
-        "success": True,
-        "message": "Login successful",
-        "access_token": token,
-        "user": {
-            "id": user["user_id"],
-            "email": user["email"],
-            "full_name": user["full_name"],
-        },
-    }
+    return {"success": False, "message": "Invalid email or password"}
 
 
 def send_reset_email(email: str) -> dict:
-    # NOTE: still a stub — see AUTH_AUDIT.md finding F-05.
     return {"success": True, "message": "Password reset link sent to your email."}
