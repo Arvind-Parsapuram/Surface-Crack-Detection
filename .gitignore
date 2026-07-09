@@ -34,5 +34,29 @@ data/*
 models/*
 !models/.gitkeep
 
+# Jupyter executed notebooks (outputs)
+notebooks/*_executed.ipynb
+
+# Raw image dataset (large ~223 MB)
+Surface Crack Detection/
+
+# Generated reports, figures, logs
+reports/*
+!reports/.gitkeep
+!reports/classification_report.txt
+!reports/confusion_matrix.png
+!reports/training_curves.png
+
+# Generated data archives
+*.zip
+
 # Other tools
 .astrivya
+
+# Ignore all dataset files, but keep folder structure markers
+data/*
+!data/**/.gitkeep
+/
+
+#ignore all eda outputs, but keep folder structure markers
+notebooks/eda_outputs/

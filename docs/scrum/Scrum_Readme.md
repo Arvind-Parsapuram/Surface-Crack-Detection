@@ -14,8 +14,17 @@
 | Day 1 | Sprint Planning | Understood project objectives and scope | Conducted Sprint Planning meeting and coordinated team | Discussed project requirements | Submitted project requirements to the team | - |
 | Day 2 | Sprint Planning | Assigned tasks to all team members | Divided sprint into tasks and scheduled work | Prepared technical documentation | Submitted technical documentation | - |
 | Day 3 | Sprint Execution | Monitored work progress and reviewed project folder structure | Created GitHub issues, monitored team progress, tracked task completion, and closed completed issues | Developed Login UI | Reviewed and developed Login UI progress | Created Supabase database schema for the login page |
-
+| Day 4 | Sprint Execution | Created foundation for model,and project structure | Updated Scrum documentation,performed EDA for dataset| Continued Login UI development and frontend integration | Reviewed progress and validated completed tasks against project requirements | Continued database integration and supported frontend connectivity | 
+| Day 5 | Sprint Execution | wired login - homepage and backend with database ,trained intial model,deployed using HuggingFace,pre-release inital version |Conducted standup, Set up and debugged the initial Streamlit E2E login tests.| Solved UI issues and did API integrtion | Solved UI issues and did API integrtion | Completed EDA and database for login |  
 ---
+
+# Sprint 2 - Scrum Documentation
+
+
+| Day | Event | Team Lead | Scrum Master | Product Owner | Business Owner | Developer |
+|-----|-------|-----------|---------------|----------------|----------------|-----------|
+| Day 6 | Sprint execution | Traning model, assisted team | Prepared E2E scripts,gave sprint board demo ,working on #14 issue| Prepared and gave sprint review and product demo | Added logout feature,working on data proceessing of home page | Audit authentucation work,documentation,created issues and woking on #15 issue|
+| Day 7| sprint execution | focused on dockerising the product,vadilated current features and assisted ci pipelines| Worked on issues ,conducted stand up and monitored team progess |Reviewed the backend API connection and created single command to run whole project | Working on #13 issue and coorperated with team| Working on #15 issue and coorporated with the team|   
 
 ## Scrum Master's Responsibilities
 
@@ -39,8 +48,9 @@
 | GitHub Issues Created | ✅ Completed |
 | Login UI |✅ Completed  |
 | Database Schema | ✅ Completed |
-| Dataset Analysis | 🔄 In Progress |
+| Dataset Analysis | ✅ Completed |
+
 
 ---
 
-**Last Updated:** Day 3
+**Last Updated:** Day 7
