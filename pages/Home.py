@@ -23,6 +23,7 @@ hide_streamlit_style = """
 }
 </style>
 """
+
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # ---------------- SIDEBAR (ONLY CLASS SELECTOR) ----------------
@@ -30,6 +31,21 @@ selected_class = st.sidebar.radio(
     "Select Class",
     ["POTHOLES", "CRACK", "PATCH", "SURFACE DEFECTS"]
 )
+# ---------------- LOGOUT BUTTON ----------------
+st.markdown("""
+<style>
+div[data-testid="stButton"]{
+    margin-top: -40px;
+}
+</style>
+""", unsafe_allow_html=True)
+
+col1, col2 = st.columns([17, 1])
+
+with col2:
+    if st.button("Logout"):
+        st.session_state.clear()      # Clear all session data
+        st.switch_page("pages/login.py")    # Redirect to Login page
 
 # ---------------- MAIN TITLE ----------------
 st.markdown(
@@ -52,14 +68,14 @@ if uploaded_file:
 
 st.write("---")
 
-# ---------------- DATA PROCESSED ----------------
-st.header("Data Processed")
-st.write({
-    "Total Images": 306,
-    "Classes": ["Cracks", "Patch", "Potholes", "Surface Defects"],
-    "Preprocessing Steps": ["Resize 224x224", "Normalization", "Augmentation (Flip, Rotate, ColorJitter)"]
-})
-st.write("---")
+# # ---------------- DATA PROCESSED ----------------
+#st.header("Data Processed")
+#st.write({
+#    "Total Images": 306,
+#    "Classes": ["Cracks", "Patch", "Potholes", "Surface Defects"],
+#    "Preprocessing Steps": ["Resize 224x224", "Normalization", "Augmentation (Flip, Rotate, ColorJitter)"]
+#})
+#st.write("---")
 
 # ---------------- PREDICTION ----------------
 st.header("Prediction")

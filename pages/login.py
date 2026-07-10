@@ -9,7 +9,16 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-[data-testid="stSidebar"] { display: none; }
+[data-testid="stSidebar"] {
+    display: none;
+}
+
+.login-box {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0px 0px 12px rgba(0,0,0,0.15);
+}
 </style>
 """, unsafe_allow_html=True)
 
