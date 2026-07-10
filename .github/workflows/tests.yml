@@ -45,10 +45,11 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Push to Hugging Face Spaces
         run: |
           git remote add hf https://amruthjakku:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/amruthjakku/surface-crack-detection
-          git push hf main --force
+          git checkout --orphan clean-deploy
+          git add -A
+          git commit -m "Deploy $(date -u +'%Y-%m-%d %H:%M:%S')"
+          git push hf clean-deploy:main --force
