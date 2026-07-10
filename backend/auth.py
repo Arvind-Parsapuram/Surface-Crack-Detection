@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 import uuid as _uuid
 from backend.database import get_supabase
