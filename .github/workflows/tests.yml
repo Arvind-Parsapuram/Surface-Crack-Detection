@@ -51,4 +51,4 @@ jobs:
       - name: Push to Hugging Face Spaces
         run: |
           git remote add hf https://amruthjakku:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/amruthjakku/surface-crack-detection
-          git push hf main
+          git push hf main --force
