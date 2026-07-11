@@ -4,19 +4,19 @@ from backend.prediction import CLASSES, CLASS_SEVERITY, predict_image
 
 
 class TestFallbackPrediction:
-    def test_fallback_returns_potholes(self, mock_model_fallback, sample_image_bytes):
+    def test_fallback_returns_na(self, mock_model_fallback, sample_image_bytes):
         result = predict_image(image_bytes=sample_image_bytes, filename="test.jpg")
         assert result["success"] is True
-        assert result["predicted_class"] == "Potholes"
+        assert result["predicted_class"] == "N/A"
 
     def test_fallback_confidence(self, mock_model_fallback, sample_image_bytes):
         result = predict_image(image_bytes=sample_image_bytes, filename="test.jpg")
-        assert result["confidence"] == 0.85
+        assert result["confidence"] == 0.0
 
     def test_fallback_probabilities(self, mock_model_fallback, sample_image_bytes):
         result = predict_image(image_bytes=sample_image_bytes, filename="test.jpg")
         probs = result["class_probabilities"]
-        assert probs == {"Cracks": 0.05, "Patch": 0.05, "Potholes": 0.85, "Surface Defects": 0.05}
+        assert probs == {"Cracks": 0.25, "Patch": 0.25, "Potholes": 0.25, "Surface Defects": 0.25}
 
     def test_fallback_returns_all_expected_keys(self, mock_model_fallback, sample_image_bytes):
         result = predict_image(image_bytes=sample_image_bytes, filename="test.jpg")
@@ -57,4 +57,4 @@ class TestErrorHandling:
     def test_invalid_image_bytes_fallback(self, mock_model_fallback):
         result = predict_image(image_bytes=b"not an image", filename="bad.jpg")
         assert result["success"] is True
-        assert result["predicted_class"] == "Potholes"
+        assert result["predicted_class"] == "N/A"

@@ -29,7 +29,7 @@ pinned: false
 
 ## 📋 Overview
 
-A multi-class classifier that detects **4 types of surface defects** from images using transfer learning on ResNet50 / EfficientNet-B0.
+A multi-class classifier that detects **4 types of surface defects** from images using transfer learning (ResNet50, EfficientNet-B0, ViT-B/16) with optional ensemble inference.
 
 | Defect Class        | Samples | % of Dataset |
 | :------------------ | ------: | :----------: |
@@ -49,16 +49,11 @@ A multi-class classifier that detects **4 types of surface defects** from images
 
 ```mermaid
 graph TB
-    Input["Input (3×224×224)"] --> Backbone["Pretrained ResNet50<br/>(ImageNet weights)"]
+    Input["Input (3×224×224)"] --> Backbone["Pretrained Backbone<br/>(ResNet50 / EfficientNet / ViT)"]
     Backbone --> Frozen["Phase 1: Frozen Backbone"]
-    Backbone --> Finetune["Phase 2: Unfreeze Last 2 Blocks"]
-    Frozen & Finetune --> GAP["Global Average Pooling"]
-    GAP --> Drop1["Dropout (p=0.5)"]
-    Drop1 --> FC1["Fully Connected (256)"]
-    FC1 --> ReLU["ReLU"]
-    ReLU --> Drop2["Dropout (p=0.3)"]
-    Drop2 --> FC2["Fully Connected (4)"]
-    FC2 --> Output["Cracks / Patch / Potholes /<br/>Surface Defects"]
+    Backbone --> Finetune["Phase 2: Unfreeze Last Stage"]
+    Frozen & Finetune --> Head["FC (2048→256) → ReLU → Dropout(0.3) → FC (256→4)"]
+    Head --> Output["Cracks / Patch / Potholes /<br/>Surface Defects"]
 ```
 
 ---
@@ -67,36 +62,35 @@ graph TB
 
 ```mermaid
 flowchart LR
-    A["Raw Images<br/>(306, varied res)"] --> B["Resize (256)"]
-    B --> C["CenterCrop (224)"]
-    C --> D["Normalize<br/>(ImageNet μ, σ)"]
-    D --> E["Stratified Split<br/>(70/15/15)"]
-    E --> F["Train Set<br/>(~214 images)"]
-    E --> G["Val Set<br/>(~46 images)"]
-    E --> H["Test Set<br/>(~46 images)"]
-    F --> I["Augmentation<br/>HFlip / Rotate / ColorJitter"]
-    I --> J["Train Model"]
+    A["Raw Images<br/>(306, varied res)"] --> B["Resize (224×224)"]
+    B --> C["Normalize<br/>(ImageNet μ, σ)"]
+    C --> D["Stratified Split<br/>(70/15/15)"]
+    D --> E["Train Set<br/>(~214 images)"]
+    D --> F["Val Set<br/>(~46 images)"]
+    D --> G["Test Set<br/>(~46 images)"]
+    E --> H["Augmentation<br/>RandResizedCrop / HFlip / Rotate /<br/>Affine / GaussianBlur / Erasing"]
+    H --> I["Train Model"]
+    F --> I
+    I --> J["Evaluate → Metrics"]
     G --> J
-    J --> K["Evaluate → Metrics"]
-    H --> K
 ```
 
 ---
 
 ## 🏋️ Training Strategy
 
-| Phase             | Backbone               | Epochs |   LR   | Optimizer |
-| :---------------- | :--------------------- | :----: | :----: | :-------: |
-| **1 — Warmup**    | Frozen                 |  5–10  | 1×10⁻³ |   AdamW   |
-| **2 — Fine-tune** | Unfreeze last 2 blocks | 15–25  | 1×10⁻⁵ |   AdamW   |
+| Phase             | Backbone             | Epochs |   LR   | Optimizer |
+| :---------------- | :------------------- | :----: | :----: | :-------: |
+| **1 — Warmup**    | Frozen               |   5    | 1×10⁻³ |   AdamW   |
+| **2 — Fine-tune** | Unfreeze last stage  |   15   | 1×10⁻⁵ |   AdamW   |
 
 | Detail               | Value                                           |
 | :------------------- | :---------------------------------------------- |
-| **Loss Function**    | Weighted CrossEntropy (inverse class frequency) |
-| **LR Scheduler**     | CosineAnnealingLR                               |
+| **Loss Function**    | Weighted CrossEntropy + label smoothing (ε=0.1) |
+| **LR Scheduler**     | ReduceLROnPlateau (factor=0.5, patience=3)      |
 | **Early Stopping**   | Patience = 7 epochs                             |
-| **Model Checkpoint** | Monitor validation F1                           |
-| **Mixed Precision**  | `torch.cuda.amp` (if GPU available)             |
+| **Model Checkpoint** | Monitor validation loss                          |
+| **Regularization**   | Mixup (α=0.2, prob=0.5)                         |
 
 ---
 
@@ -133,7 +127,7 @@ bootcamp/
 ├── src/                          # Training pipeline
 │   ├── config.py                 #   Hyperparameters
 │   ├── dataset.py                #   Dataset + transforms
-│   ├── model.py                  #   ResNet50 / baseline CNN
+│   ├── model.py                  #   ResNet50 / EfficientNet / ViT
 │   ├── train.py                  #   Training loop
 │   ├── evaluate.py               #   Evaluation + metrics
 │   └── prepare_data.py           #   Data splitting

@@ -87,7 +87,7 @@ def run_training():
     
     # Calculate weighted loss for class imbalance
     class_weights = calculate_class_weights(train_loader)
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
+    criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=Config.LABEL_SMOOTHING)
     
     # Instantiate Model
     print(f"Initializing {Config.MODEL_NAME} Transfer Learning model...")

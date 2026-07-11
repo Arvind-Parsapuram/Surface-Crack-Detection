@@ -63,6 +63,43 @@ def _load_models():
     return _models, _transform
 
 
+def _tta_predict(models, input_tensor):
+    """Run inference with Test-Time Augmentation and return averaged probabilities."""
+    from src.config import Config
+    import torch
+    from torchvision import transforms as T
+
+    all_probs = []
+    # Base prediction
+    with torch.no_grad():
+        for m in models:
+            outputs = m(input_tensor)
+            probs = torch.softmax(outputs, dim=1).squeeze(0).cpu().numpy()
+            all_probs.append(probs)
+
+    if not Config.TTA_ENABLED:
+        return np.mean(all_probs, axis=0)
+
+    # Test-time augmentations
+    tta_transforms = [
+        lambda x: x,
+        lambda x: T.functional.hflip(x),
+        lambda x: T.functional.vflip(x),
+        lambda x: T.functional.rotate(x, 90),
+        lambda x: T.functional.rotate(x, 180),
+        lambda x: T.functional.rotate(x, 270),
+    ]
+    for aug in tta_transforms[1:]:
+        aug_tensor = aug(input_tensor)
+        with torch.no_grad():
+            for m in models:
+                outputs = m(aug_tensor)
+                probs = torch.softmax(outputs, dim=1).squeeze(0).cpu().numpy()
+                all_probs.append(probs)
+
+    return np.mean(all_probs, axis=0)
+
+
 def predict_image(image_bytes: bytes, filename: str = "upload.jpg") -> dict:
     models, transform = _load_models()
 
@@ -71,22 +108,14 @@ def predict_image(image_bytes: bytes, filename: str = "upload.jpg") -> dict:
         import torch
         input_tensor = transform(pil_image).unsqueeze(0).to("cpu")
 
-        all_probs = []
-        with torch.no_grad():
-            for m in models:
-                outputs = m(input_tensor)
-                probs = torch.softmax(outputs, dim=1).squeeze(0).cpu().numpy()
-                all_probs.append(probs)
-
-        # Average probabilities across all models
-        avg_probs = np.mean(all_probs, axis=0)
+        avg_probs = _tta_predict(models, input_tensor)
         pred_idx = int(np.argmax(avg_probs))
         confidence = float(avg_probs[pred_idx])
         predicted_class = CLASSES[pred_idx]
     else:
-        predicted_class = "Potholes"
-        confidence = 0.85
-        avg_probs = np.array([0.05, 0.05, 0.85, 0.05])
+        predicted_class = "N/A"
+        confidence = 0.0
+        avg_probs = np.array([0.25, 0.25, 0.25, 0.25])
 
     base_sev = CLASS_SEVERITY.get(predicted_class, 0.5)
     severity_score = round(min(base_sev * (0.5 + 0.5 * confidence), 1.0), 3)

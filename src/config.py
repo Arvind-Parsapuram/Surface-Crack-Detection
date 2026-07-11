@@ -36,10 +36,16 @@ class Config:
     # Early stopping
     EARLY_STOP_PATIENCE = 7
     
+    # Label smoothing
+    LABEL_SMOOTHING = 0.1
+    
     # Mixup / CutMix
     MIXUP_ALPHA = 0.2
     CUTMIX_ALPHA = 0.2
     MIXUP_PROB = 0.5
+    
+    # Test-Time Augmentation
+    TTA_ENABLED = True
     
     # Hardware device configuration
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
