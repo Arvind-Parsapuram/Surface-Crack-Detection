@@ -31,7 +31,7 @@ except ImportError:
 st.set_page_config(page_title="Surface Crack Detection", layout="wide")
 require_login()
  
-CLASSES = ["Potholes", "Cracks", "Patch", "Surface_Defects"]
+CLASSES = ["Potholes", "Cracks", "Patch", "Surface Defects"]
 SEVERITY_ORDER = ["Low", "Medium", "High"]
 SEVERITY_COLOR = {
     "Low": "#2ecc71",

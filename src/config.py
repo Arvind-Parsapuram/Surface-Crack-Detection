@@ -16,7 +16,7 @@ class Config:
     TEST_DIR = os.path.join(PROCESSED_DATA_DIR, "test")
     
     # Class categories
-    CLASSES = ["Cracks", "Patch", "Potholes", "Surface_Defects"]
+    CLASSES = ["Cracks", "Patch", "Potholes", "Surface Defects"]
     NUM_CLASSES = len(CLASSES)
 
     # Stratified split ratios

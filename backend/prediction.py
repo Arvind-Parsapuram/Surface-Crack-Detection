@@ -4,13 +4,13 @@ import numpy as np
 from PIL import Image
 from backend.cost import estimate_repair_cost, estimate_repair_time
 
-CLASSES = ["Cracks", "Patch", "Potholes", "Surface_Defects"]
+CLASSES = ["Cracks", "Patch", "Potholes", "Surface Defects"]
 
 CLASS_SEVERITY = {
     "Cracks": 0.50,
     "Patch": 0.25,
     "Potholes": 0.75,
-    "Surface_Defects": 0.60,
+    "Surface Defects": 0.60,
 }
 
 _models = None
