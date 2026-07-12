@@ -19,6 +19,15 @@ from src.dataset import get_dataloaders
 from src.model import get_model, unfreeze_for_finetune
 from src.utils import plot_training_curves
 
+def _get_classifier(model, model_name):
+    if model_name == "resnet50":
+        return model.fc
+    elif model_name == "efficientnet_b0":
+        return model.classifier
+    elif model_name == "vit_b_16":
+        return model.heads.head
+    raise ValueError(f"Unknown model: {model_name}")
+
 def calculate_class_weights(loader):
     """Computes inverse class frequencies to handle imbalanced datasets."""
     class_counts = [0] * Config.NUM_CLASSES
@@ -138,7 +147,7 @@ def run_training(model_name=None):
     # Phase 1: Warmup
     n_batches = len(train_loader)
     print(f"--- Phase 1: Warmup Training ({n_batches} batches/epoch) ---", flush=True)
-    optimizer = optim.AdamW(model.fc.parameters(), lr=Config.LEARNING_RATE)
+    optimizer = optim.AdamW(_get_classifier(model, model_name).parameters(), lr=Config.LEARNING_RATE)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=Config.SCHEDULER_FACTOR,
         patience=Config.SCHEDULER_PATIENCE, min_lr=Config.SCHEDULER_MIN_LR
