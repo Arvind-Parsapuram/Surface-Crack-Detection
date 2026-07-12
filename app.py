@@ -210,9 +210,7 @@ def save_prediction_record(user_id, record, session_history):
 # GRADIO APP
 # =========================================================================
 with gr.Blocks(
-    css=CUSTOM_CSS,
     title="Surface Crack Detection",
-    theme=gr.themes.Soft(),
     fill_height=True,
 ) as app:
 
@@ -726,4 +724,7 @@ Class Probabilities:
     )
 
 if __name__ == "__main__":
-    app.launch()
+    app.launch(
+        css=CUSTOM_CSS,
+        theme=gr.themes.Soft(),
+    )
