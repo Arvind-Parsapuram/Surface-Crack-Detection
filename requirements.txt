@@ -12,7 +12,7 @@ python-dotenv==1.2.2
 bcrypt==4.3.0
 
 # Frontend
-# streamlit is provided by HF Spaces Streamlit SDK — omit to avoid version conflicts
+gradio==5.20.1
 
 # ML / Data
 torch==2.12.1
