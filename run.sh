@@ -15,7 +15,7 @@ if [[ ! -x "$PYTHON_BIN" ]]; then
 fi
 
 echo "Installing Python dependencies..."
-"$PIP_BIN" install -r requirements.txt -q
+"$PIP_BIN" install -r requirements.txt
 
 # ── 2. Node frontend ───────────────────────────────────
 FRONTEND_DIR="$ROOT_DIR/frontend"
@@ -23,7 +23,7 @@ FRONTEND_DIR="$ROOT_DIR/frontend"
 if [[ -d "$FRONTEND_DIR" ]]; then
     echo "Installing frontend dependencies..."
     cd "$FRONTEND_DIR"
-    npm install --silent 2>/dev/null
+    npm install
     cd "$ROOT_DIR"
 else
     echo "WARNING: Frontend directory not found at $FRONTEND_DIR"

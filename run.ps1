@@ -13,14 +13,20 @@ if (-not (Test-Path "$VenvDir/Scripts/python.exe")) {
 }
 
 Write-Host "Installing Python dependencies..." -ForegroundColor Cyan
-& "$VenvDir/Scripts/pip" install -r "$RootDir/requirements.txt" -q
+& "$VenvDir/Scripts/pip" install -r "$RootDir/requirements.txt"
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "pip install failed — recreating venv and retrying..." -ForegroundColor Yellow
+    Remove-Item -Recurse -Force $VenvDir -ErrorAction SilentlyContinue
+    python -m venv $VenvDir
+    & "$VenvDir/Scripts/pip" install -r "$RootDir/requirements.txt"
+}
 
 # ── 2. Node frontend ───────────────────────────────────
 $FrontendDir = "$RootDir/frontend"
 if (Test-Path $FrontendDir) {
     Write-Host "Installing frontend dependencies..." -ForegroundColor Cyan
     Push-Location $FrontendDir
-    npm install --silent 2>$null
+    npm install
     Pop-Location
 } else {
     Write-Warning "Frontend directory not found at $FrontendDir"
