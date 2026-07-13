@@ -777,10 +777,11 @@ Class Probabilities:
         for cls, prob in class_probs.items():
             report += f"  {cls}: {prob:.1%}\n"
 
+        report_encoded = report.replace(' ', '%20').replace('\n', '%0A')
         report_html = f"""<div class="card">
         <div class="card-title">📄 Final Report</div>
         <textarea style="width:100%;height:140px;border:1px solid var(--border-light);border-radius:8px;padding:0.75rem;font-family:monospace;font-size:0.82rem;color:var(--text-primary);resize:none;" readonly>{report}</textarea>
-        <div style="margin-top:0.75rem;"><a href="data:text/plain;charset=utf-8,{report.replace(' ', '%20').replace('\n', '%0A')}" download="final_report.txt" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1.2rem;background:var(--accent);color:white;border-radius:8px;text-decoration:none;font-size:0.85rem;font-weight:500;transition:all 0.2s;">📥 Download Report</a></div>
+        <div style="margin-top:0.75rem;"><a href="data:text/plain;charset=utf-8,{report_encoded}" download="final_report.txt" style="display:inline-flex;align-items:center;gap:0.4rem;padding:0.5rem 1.2rem;background:var(--accent);color:white;border-radius:8px;text-decoration:none;font-size:0.85rem;font-weight:500;transition:all 0.2s;">📥 Download Report</a></div>
         </div>"""
 
         return gr.update(value=results_html), gr.update(value=report_html)
