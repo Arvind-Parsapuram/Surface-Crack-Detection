@@ -20,4 +20,4 @@ if [[ ! -x "$GRADIO_BIN" ]]; then
 fi
 
 echo "Starting Gradio app on http://0.0.0.0:8501"
-"$GRADIO_BIN" app.py --server.port 8501 --server.address 0.0.0.0
+"$GRADIO_BIN" main.py --server.port 8501 --server.address 0.0.0.0
