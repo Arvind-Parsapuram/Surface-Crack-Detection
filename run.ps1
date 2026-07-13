@@ -5,7 +5,7 @@ $RootDir = Split-Path -Parent $PSCommandPath
 $BackendPort = 8501
 $FrontendPort = 5173
 
-# ── 1. Python backend ──────────────────────────────────
+# -- 1. Python backend ---------------------------------
 $VenvDir = "$RootDir/venv"
 if (-not (Test-Path "$VenvDir/Scripts/python.exe")) {
     Write-Host "Creating Python virtual environment..." -ForegroundColor Cyan
@@ -15,13 +15,13 @@ if (-not (Test-Path "$VenvDir/Scripts/python.exe")) {
 Write-Host "Installing Python dependencies..." -ForegroundColor Cyan
 & "$VenvDir/Scripts/pip" install -r "$RootDir/requirements.txt"
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "pip install failed — recreating venv and retrying..." -ForegroundColor Yellow
+    Write-Host "pip install failed -- recreating venv and retrying..." -ForegroundColor Yellow
     Remove-Item -Recurse -Force $VenvDir -ErrorAction SilentlyContinue
     python -m venv $VenvDir
     & "$VenvDir/Scripts/pip" install -r "$RootDir/requirements.txt"
 }
 
-# ── 2. Node frontend ───────────────────────────────────
+# -- 2. Node frontend ----------------------------------
 $FrontendDir = "$RootDir/frontend"
 if (Test-Path $FrontendDir) {
     Write-Host "Installing frontend dependencies..." -ForegroundColor Cyan
@@ -32,7 +32,7 @@ if (Test-Path $FrontendDir) {
     Write-Warning "Frontend directory not found at $FrontendDir"
 }
 
-# ── 3. Start both services ────────────────────────────
+# -- 3. Start both services ----------------------------
 Write-Host "`n==============================================" -ForegroundColor Green
 Write-Host " Starting Surface Crack Detection App" -ForegroundColor Green
 Write-Host "==============================================`n" -ForegroundColor Green
