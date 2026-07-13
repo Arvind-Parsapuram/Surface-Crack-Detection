@@ -1,5 +1,4 @@
 import os
-import streamlit as st
 import uuid as _uuid
 from backend.database import get_supabase
 
@@ -38,14 +37,6 @@ def login_user(email: str, password: str) -> dict:
 def send_reset_email(email: str) -> dict:
     return {"success": True, "message": "Password reset link sent to your email."}
 
-
-def require_login():
-    """Call at the top of every protected Streamlit page.
-    Redirects to the login page if no valid session exists."""
-    if not st.session_state.get("access_token"):
-        st.warning("Please log in to continue.")
-        st.switch_page("login")
-        st.stop()
 
 
 def get_github_login_url(redirect_to: str) -> str:
