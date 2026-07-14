@@ -1,9 +1,25 @@
 import io
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from PIL import Image
+
+# Mock Supabase before any backend imports trigger get_supabase()
+_mock_supabase = MagicMock()
+_mock_supabase.auth.sign_in_with_password.return_value = MagicMock(
+    user=MagicMock(id="uid-1", email="a@b.com", user_metadata={"full_name": "Test User"}),
+    session=MagicMock(access_token="sbp-token"),
+)
+_mock_supabase.auth.sign_up.return_value = MagicMock(
+    user=MagicMock(id="uid-2", email="new@user.com", user_metadata={"full_name": "New User"}),
+)
+_mock_supabase.auth.exchange_code_for_session.return_value = MagicMock(
+    user=MagicMock(id="uid-3", email="gh@user.com", user_metadata={"full_name": "GH User"}),
+    session=MagicMock(access_token="gh-token"),
+)
+patch("backend.database.get_supabase", return_value=_mock_supabase).start()
 
 from backend.main import app, create_jwt_token
 
@@ -24,30 +40,28 @@ class TestHealthAndRoot:
 
 class TestLogin:
     def test_login_success(self):
-        r = client.post("/api/auth/login", json={
-            "email": "admin@surfacedetection.com",
-            "password": "Admin@123",
-        })
+        _mock_supabase.auth.sign_in_with_password.side_effect = None
+        _mock_supabase.auth.sign_in_with_password.return_value = MagicMock(
+            user=MagicMock(id="u1", email="a@b.com", user_metadata={"full_name": "Test User"}),
+            session=MagicMock(access_token="sbp-token"),
+        )
+        r = client.post("/api/auth/login", json={"email": "a@b.com", "password": "x"})
         assert r.status_code == 200
         body = r.json()
         assert body["success"] is True
-        assert isinstance(body["access_token"], str) and len(body["access_token"]) > 20
-        assert body["user"]["email"] == "admin@surfacedetection.com"
-        assert body["user"]["full_name"] == "Admin"
+        assert isinstance(body["access_token"], str) and len(body["access_token"]) > 0
+        assert body["user"]["email"] == "a@b.com"
+        assert body["user"]["full_name"] == "Test User"
 
     def test_login_bad_password(self):
-        r = client.post("/api/auth/login", json={
-            "email": "admin@surfacedetection.com",
-            "password": "wrong",
-        })
+        _mock_supabase.auth.sign_in_with_password.side_effect = Exception("Invalid login credentials")
+        r = client.post("/api/auth/login", json={"email": "a@b.com", "password": "wrong"})
         assert r.status_code == 200
         assert r.json()["success"] is False
 
     def test_login_bad_email(self):
-        r = client.post("/api/auth/login", json={
-            "email": "nobody@example.com",
-            "password": "Admin@123",
-        })
+        _mock_supabase.auth.sign_in_with_password.side_effect = Exception("Invalid login credentials")
+        r = client.post("/api/auth/login", json={"email": "unknown@test.com", "password": "x"})
         assert r.status_code == 200
         assert r.json()["success"] is False
 
@@ -68,6 +82,14 @@ class TestRegister:
         assert body["success"] is True
         assert body["user"]["email"] == "new@user.com"
         assert body["user"]["full_name"] == "New User"
+
+    def test_register_duplicate(self):
+        _mock_supabase.auth.sign_up.side_effect = Exception("already registered")
+        r = client.post("/api/auth/register", json={
+            "email": "dup@test.com", "password": "x", "full_name": "Dup",
+        })
+        assert r.status_code == 200
+        assert r.json()["success"] is False
 
     def test_register_missing_field(self):
         r = client.post("/api/auth/register", json={

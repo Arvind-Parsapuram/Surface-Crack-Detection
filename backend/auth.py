@@ -6,9 +6,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def _user_from_session(session: Any) -> dict:
-    """Build a consistent user dict from a Supabase Auth session / user object."""
-    u = session.user if hasattr(session, "user") else session
+def _user_from_session(u: Any) -> dict:
+    """Build a consistent user dict from a Supabase Auth user object."""
     return {
         "id": u.id,
         "email": u.email,
@@ -86,10 +85,5 @@ def complete_github_login(auth_code: str) -> dict:
     return {
         "success": True,
         "access_token": session.session.access_token,
-        "user": {
-            "id": session.user.id,
-            "email": session.user.email,
-            "full_name": session.user.user_metadata.get("full_name")
-                or session.user.user_metadata.get("user_name"),  # GitHub username fallback
-        },
+        "user": _user_from_session(session.user),
     }
