@@ -169,6 +169,49 @@ def model_status():
     return {"status": MODEL_STATUS}
 
 
+@app.get("/api/model/debug")
+def model_debug():
+    from backend.prediction import _models, _transform, MODEL_STATUS
+    import pathlib
+    info = {
+        "model_status": MODEL_STATUS,
+        "models_loaded": _models is not None and len(_models) > 0,
+        "num_models": len(_models) if _models else 0,
+        "transform_ready": _transform is not None,
+        "models_dir_exists": os.path.isdir("models"),
+        "models_dir_files": os.listdir("models") if os.path.isdir("models") else [],
+    }
+    cfg = {}
+    try:
+        from src.config import Config
+        cfg["model_name"] = Config.MODEL_NAME
+        cfg["expected_path"] = Config.get_model_path(model_name=Config.MODEL_NAME)
+        cfg["device"] = str(getattr(Config, "DEVICE", "N/A"))
+    except Exception as e:
+        cfg["error"] = str(e)
+    info["config"] = cfg
+    hf = {}
+    try:
+        cache_dir = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
+        hf["cache_dir"] = str(cache_dir)
+        hf["cache_exists"] = cache_dir.is_dir()
+        if cache_dir.is_dir():
+            hf["cache_contents"] = os.listdir(str(cache_dir))
+    except Exception as e:
+        hf["error"] = str(e)
+    info["huggingface"] = hf
+    ml = {}
+    try:
+        import torch
+        ml["torch_version"] = torch.__version__
+        ml["cuda_available"] = torch.cuda.is_available()
+        ml["device_count"] = torch.cuda.device_count() if torch.cuda.is_available() else 0
+    except Exception as e:
+        ml["error"] = str(e)
+    info["ml"] = ml
+    return info
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}

@@ -1,8 +1,11 @@
 import io
 import os
+import logging
 import numpy as np
 from PIL import Image
 from backend.cost import estimate_repair_cost, estimate_repair_time
+
+logger = logging.getLogger(__name__)
 
 CLASSES = ["Cracks", "Patch", "Potholes", "Surface Defects"]
 
@@ -21,16 +24,20 @@ MODEL_STATUS = "unavailable"  # "loading", "loaded", "unavailable", "error"
 def _load_models():
     global _models, _transform, MODEL_STATUS
     if _models is not None:
+        logger.info("_load_models: models already loaded, returning cached")
         return _models, _transform
 
     MODEL_STATUS = "loading"
+    logger.info("_load_models: starting model loading")
 
     try:
         from torchvision import transforms
         from src.model import get_model
         from src.config import Config
         import torch
-    except ImportError:
+        logger.info("Imports OK: torch=%s, device=%s", torch.__version__, Config.DEVICE)
+    except ImportError as e:
+        logger.warning("Import FAILED: %s", e, exc_info=True)
         MODEL_STATUS = "unavailable"
         return None, None
 
@@ -39,43 +46,67 @@ def _load_models():
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
+    logger.info("Transform ready: size=%s", Config.IMAGE_SIZE)
 
     _models = []
     model_names = Config.ENSEMBLE_MODELS if len(Config.ENSEMBLE_MODELS) > 0 else [Config.MODEL_NAME]
+    logger.info("Model names to load: %s", model_names)
 
     for name in model_names:
         model_path = Config.get_model_path(model_name=name)
+        logger.info("Processing model='%s': path='%s', exists=%s", name, model_path, os.path.exists(model_path))
+
         if not os.path.exists(model_path):
+            logger.info("Path not found. models/ dir contents: %s", os.listdir("models") if os.path.isdir("models") else "DIR NOT FOUND")
             try:
                 from huggingface_hub import hf_hub_download
                 os.makedirs("models", exist_ok=True)
+                logger.info("Starting hf_hub_download(repo_id='amruthjakku/surface-crack-detection-model', filename='%s_best.pth', local_dir='models')", name)
                 downloaded = hf_hub_download(
                     repo_id="amruthjakku/surface-crack-detection-model",
                     filename=f"{name}_best.pth",
                     local_dir="models"
                 )
+                file_size = os.path.getsize(downloaded) if os.path.exists(downloaded) else -1
+                logger.info("Download SUCCESS: path='%s', size=%d bytes", downloaded, file_size)
                 model_path = downloaded
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Download FAILED: %s", e, exc_info=True)
+                import pathlib
+                cache_dir = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
+                if cache_dir.is_dir():
+                    logger.warning("HF cache dir exists at %s, contents: %s", cache_dir, os.listdir(str(cache_dir)))
+                else:
+                    logger.warning("HF cache dir %s does not exist", cache_dir)
 
         if os.path.exists(model_path):
             try:
+                logger.info("Loading model from '%s'", model_path)
                 m = get_model(model_name=name, num_classes=Config.NUM_CLASSES, pretrained=False)
                 data = torch.load(model_path, map_location=Config.DEVICE)
-                if isinstance(data, dict) and ("model_state_dict" in data or "state_dict" in data):
-                    data = data.get("model_state_dict") or data["state_dict"]
+                if isinstance(data, dict):
+                    logger.info("Checkpoint keys: %s", list(data.keys()))
+                    if "model_state_dict" in data or "state_dict" in data:
+                        data = data.get("model_state_dict") or data["state_dict"]
+                        logger.info("Extracted state_dict from checkpoint wrapper")
+                else:
+                    logger.info("Checkpoint is a bare tensor/list, not a dict")
                 m.load_state_dict(data)
                 m.to(Config.DEVICE)
                 m.eval()
+                num_params = sum(p.numel() for p in m.parameters())
+                logger.info("Model '%s' loaded OK: %d parameters, device=%s", name, num_params, Config.DEVICE)
                 _models.append(m)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("Model load FAILED for '%s': %s", name, e, exc_info=True)
 
     if len(_models) > 0:
         MODEL_STATUS = "loaded"
+        logger.info("_load_models: done. Loaded %d model(s), status=%s", len(_models), MODEL_STATUS)
     else:
         MODEL_STATUS = "unavailable"
         _models = None
+        logger.warning("_load_models: done. No models loaded, status=unavailable")
     return _models, _transform
 
 
