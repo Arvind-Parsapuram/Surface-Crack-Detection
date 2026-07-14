@@ -107,6 +107,8 @@ async function apiFetch<T>(path: string, opts: FetchOpts = {}): Promise<T> {
 }
 
 export const api = {
+  modelStatus: () =>
+    apiFetch<{ status: string }>("/api/model/status"),
   login: (username: string, password: string) =>
     apiFetch<AuthSuccess>("/api/auth/login", { body: { username, password } }),
 

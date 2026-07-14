@@ -14,7 +14,7 @@ from backend.auth import (
     get_github_login_url,
     complete_github_login,
 )
-from backend.prediction import predict_image
+from backend.prediction import predict_image, MODEL_STATUS
 
 load_dotenv()
 
@@ -162,6 +162,11 @@ async def predict_route(
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
+
+
+@app.get("/api/model/status")
+def model_status():
+    return {"status": MODEL_STATUS}
 
 
 @app.get("/api/health")

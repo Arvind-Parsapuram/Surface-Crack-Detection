@@ -15,12 +15,15 @@ CLASS_SEVERITY = {
 
 _models = None
 _transform = None
+MODEL_STATUS = "unavailable"  # "loading", "loaded", "unavailable", "error"
 
 
 def _load_models():
-    global _models, _transform
+    global _models, _transform, MODEL_STATUS
     if _models is not None:
         return _models, _transform
+
+    MODEL_STATUS = "loading"
 
     try:
         from torchvision import transforms
@@ -28,6 +31,7 @@ def _load_models():
         from src.config import Config
         import torch
     except ImportError:
+        MODEL_STATUS = "unavailable"
         return None, None
 
     _transform = transforms.Compose([
@@ -44,22 +48,33 @@ def _load_models():
         if not os.path.exists(model_path):
             try:
                 from huggingface_hub import hf_hub_download
-                hf_hub_download(
+                os.makedirs("models", exist_ok=True)
+                downloaded = hf_hub_download(
                     repo_id="amruthjakku/surface-crack-detection-model",
                     filename=f"{name}_best.pth",
                     local_dir="models"
                 )
+                model_path = downloaded
             except Exception:
                 pass
 
         if os.path.exists(model_path):
-            m = get_model(model_name=name, num_classes=Config.NUM_CLASSES, pretrained=False)
-            m.load_state_dict(torch.load(model_path, map_location=Config.DEVICE))
-            m.to(Config.DEVICE)
-            m.eval()
-            _models.append(m)
+            try:
+                m = get_model(model_name=name, num_classes=Config.NUM_CLASSES, pretrained=False)
+                data = torch.load(model_path, map_location=Config.DEVICE)
+                if isinstance(data, dict) and ("model_state_dict" in data or "state_dict" in data):
+                    data = data.get("model_state_dict") or data["state_dict"]
+                m.load_state_dict(data)
+                m.to(Config.DEVICE)
+                m.eval()
+                _models.append(m)
+            except Exception:
+                pass
 
-    if len(_models) == 0:
+    if len(_models) > 0:
+        MODEL_STATUS = "loaded"
+    else:
+        MODEL_STATUS = "unavailable"
         _models = None
     return _models, _transform
 
@@ -105,14 +120,19 @@ def predict_image(image_bytes: bytes, filename: str = "upload.jpg") -> dict:
     models, transform = _load_models()
 
     if models is not None:
-        pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        import torch
-        input_tensor = transform(pil_image).unsqueeze(0).to("cpu")
+        try:
+            pil_image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+            import torch
+            input_tensor = transform(pil_image).unsqueeze(0).to("cpu")
 
-        avg_probs = _tta_predict(models, input_tensor)
-        pred_idx = int(np.argmax(avg_probs))
-        confidence = float(avg_probs[pred_idx])
-        predicted_class = CLASSES[pred_idx]
+            avg_probs = _tta_predict(models, input_tensor)
+            pred_idx = int(np.argmax(avg_probs))
+            confidence = float(avg_probs[pred_idx])
+            predicted_class = CLASSES[pred_idx]
+        except Exception:
+            predicted_class = "N/A"
+            confidence = 0.0
+            avg_probs = np.array([0.25, 0.25, 0.25, 0.25])
     else:
         predicted_class = "N/A"
         confidence = 0.0

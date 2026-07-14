@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Shield, LogOut, LayoutDashboard, ScanSearch, User } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,9 +19,23 @@ function initials(name: string) {
   return (a + b).toUpperCase() || "U";
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  loaded: "bg-green-500",
+  loading: "bg-yellow-500 animate-pulse",
+  unavailable: "bg-gray-500",
+  error: "bg-red-500",
+};
+
 export function TopNav() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [modelStatus, setModelStatus] = useState<string>("unavailable");
+
+  useEffect(() => {
+    api.modelStatus()
+      .then(r => setModelStatus(r.status))
+      .catch(() => setModelStatus("unavailable"));
+  }, []);
 
   const handleSignOut = () => {
     signOut();
@@ -33,7 +49,13 @@ export function TopNav() {
           <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
             <Shield className="h-4 w-4 text-white" strokeWidth={2.5} />
           </div>
-          <span className="font-semibold tracking-tight">CrackScan</span>
+          <div className="flex flex-col leading-tight">
+            <span className="font-semibold tracking-tight">CrackScan</span>
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[modelStatus] ?? "bg-gray-500"}`} />
+              {modelStatus}
+            </span>
+          </div>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
