@@ -1,8 +1,10 @@
 import os
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from jose import JWTError, jwt
@@ -45,13 +47,6 @@ def root():
     <a href="/docs">API Documentation (Swagger UI)</a>
     <a href="/api/health">Health Check</a>
   </div>
-    <p style="margin-top:1.5rem;font-size:0.75rem;color:#4A4D62">
-    Open the app at <a href="http://localhost:5173" style="color:#6366F1;background:none;border:none;padding:0;display:inline;font-size:0.75rem;">http://localhost:5173</a>
-  </p>
-  <p style="margin-top:0.5rem;font-size:0.7rem;color:#3A3D52">
-    Terminal 1: python app.py (this server)<br>
-    Terminal 2: cd frontend && npm run dev
-  </p>
 </div></body></html>"""
     return HTMLResponse(html)
 
@@ -183,3 +178,8 @@ async def predict_route(
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+# Serve built frontend (if present) — must be last, after all API routes
+STATIC_DIR = Path(__file__).parent / "static"
+if STATIC_DIR.is_dir() and (STATIC_DIR / "index.html").exists():
+    app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="frontend")
