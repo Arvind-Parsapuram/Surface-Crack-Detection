@@ -56,6 +56,7 @@ function LoginPage() {
     setSubmitting(true);
     try {
       const res = await api.login(parsed.data.username, parsed.data.password);
+      if (!res.success) throw new ApiError(0, res.message ?? "Invalid credentials");
       signIn(res.access_token, res.user);
       toast.success(`Welcome back, ${res.user.full_name}`);
       navigate({ to: "/dashboard", replace: true });

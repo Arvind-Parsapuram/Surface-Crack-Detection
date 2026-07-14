@@ -55,7 +55,8 @@ function RegisterPage() {
     setErrors({});
     setSubmitting(true);
     try {
-      await api.register(parsed.data.username, parsed.data.password, parsed.data.full_name);
+      const reg = await api.register(parsed.data.username, parsed.data.password, parsed.data.full_name);
+      if (!reg.success) throw new ApiError(0, reg.message ?? "Registration failed");
       toast.success("Account created. Please sign in.");
       navigate({ to: "/login", replace: true });
     } catch (err) {
