@@ -83,12 +83,19 @@ class SessionTracker:
         return entry
 
     @staticmethod
-    def new_session(device, mode, model_results):
+    def new_session(device, mode, model_results, kfold_summary=None):
         entry = {
             "timestamp": time.strftime("%Y-%m-%d_%H-%M"),
             "device": str(device),
             "mode": mode,
             "models": model_results,
         }
+        if kfold_summary:
+            entry["kfold"] = {
+                "n_folds": kfold_summary["n_folds"],
+                "avg_val_loss": round(kfold_summary["avg_val_loss"], 4),
+                "avg_val_acc": round(kfold_summary["avg_val_acc"], 4),
+                "std_val_acc": round(kfold_summary["std_val_acc"], 4),
+            }
         SessionTracker.save_entry(entry)
         return entry

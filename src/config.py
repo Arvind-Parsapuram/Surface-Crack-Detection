@@ -22,6 +22,11 @@ class Config:
     # Stratified split ratios
     SPLIT_RATIOS = {"train": 0.70, "val": 0.15, "test": 0.15}
 
+    # K-Fold Cross-Validation
+    N_FOLDS = 5
+    FOLD = None  # None = normal single-split mode; 0..N_FOLDS-1 = specific fold
+    KFOLD_DIR = os.path.join(PROCESSED_DATA_DIR, "folds")
+
     # Model selection
     MODEL_NAME = "resnet50"  # Options: "resnet50", "efficientnet_b0", "vit_b_16"
     ENSEMBLE_MODELS = []  # empty = single-model mode; only one weights file (best_model.pth) exists on HF
@@ -68,6 +73,18 @@ class Config:
     
     # Pothole priority (class index 2) — extra weight multiplier
     POTHOLE_PRIORITY = 1.5
+
+    # Synthetic augmentation
+    SYNTHETIC_DIR = "data/synthetic"
+    SYNTHETIC_ENABLED = False
+    SYNTHETIC_FACTOR = 1.0  # multiplier relative to real data per class
+
+    # Knowledge Distillation
+    DISTILL_TEACHERS = ["resnet50", "efficientnet_b0", "vit_b_16"]
+    DISTILL_TEMPERATURE = 4.0
+    DISTILL_ALPHA = 0.7  # weight of teacher soft-loss vs hard-label loss
+    DISTILL_STUDENT = "mobilenet_v3_small"
+    DISTILL_EPOCHS = 20
     
     # Weights & Biases
     WANDB_ENABLED = False

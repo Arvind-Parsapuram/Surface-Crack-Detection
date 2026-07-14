@@ -27,6 +27,8 @@ def _get_classifier(model, model_name):
         return model.classifier
     elif model_name == "vit_b_16":
         return model.heads.head
+    elif model_name == "mobilenet_v3_small":
+        return model.classifier
     raise ValueError(f"Unknown model: {model_name}")
 
 def calculate_class_weights(loader):
@@ -109,9 +111,9 @@ def validate(model, loader, criterion):
             
     return running_loss / total, correct / total
 
-def run_training(model_name=None):
+def run_training(model_name=None, fold=None):
     model_name = model_name or Config.MODEL_NAME
-    train_loader, val_loader, test_loader = get_dataloaders()
+    train_loader, val_loader, test_loader = get_dataloaders(fold=fold)
     
     # Calculate weighted loss for class imbalance
     class_weights = calculate_class_weights(train_loader)
@@ -149,9 +151,10 @@ def run_training(model_name=None):
         )
         wandb.watch(model, log="gradients", log_freq=10)
     
+    fold_tag = f" [Fold {fold}]" if fold is not None else ""
     # Phase 1: Warmup
     n_batches = len(train_loader)
-    print(f"--- Phase 1: Warmup Training ({n_batches} batches/epoch) ---", flush=True)
+    print(f"--- Phase 1: Warmup Training{fold_tag} ({n_batches} batches/epoch) ---", flush=True)
     optimizer = optim.AdamW(_get_classifier(model, model_name).parameters(), lr=Config.LEARNING_RATE)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="min", factor=Config.SCHEDULER_FACTOR,
@@ -204,7 +207,10 @@ def run_training(model_name=None):
         scheduler.step(val_loss)
         
         # Save best model
-        model_path = Config.get_model_path(model_name)
+        if fold is not None:
+            model_path = os.path.join(Config.MODELS_DIR, f"fold_{fold}_best_model.pth")
+        else:
+            model_path = Config.get_model_path(model_name)
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             early_stop_counter = 0
@@ -239,9 +245,54 @@ def run_training(model_name=None):
     
     return {
         "best_val_loss": best_val_loss,
+        "best_val_acc": max(val_accs) if val_accs else 0.0,
         "train_losses": train_losses,
         "val_losses": val_losses,
+        "fold": fold,
+    }
+
+def run_kfold(model_name=None):
+    """Run K-fold cross-validation, aggregating metrics across all folds."""
+    model_name = model_name or Config.MODEL_NAME
+    print(f"\n{'='*60}", flush=True)
+    print(f"Starting {Config.N_FOLDS}-Fold Cross-Validation ({model_name})", flush=True)
+    print(f"{'='*60}", flush=True)
+
+    fold_results = []
+    for k in range(Config.N_FOLDS):
+        print(f"\n{'='*60}", flush=True)
+        print(f"Fold {k + 1}/{Config.N_FOLDS}", flush=True)
+        print(f"{'='*60}", flush=True)
+        result = run_training(model_name=model_name, fold=k)
+        result["fold"] = k
+        fold_results.append(result)
+
+    # Aggregate metrics
+    val_losses = [r["best_val_loss"] for r in fold_results]
+    val_accs = [r["best_val_acc"] for r in fold_results]
+    avg_val_loss = sum(val_losses) / len(val_losses)
+    avg_val_acc = sum(val_accs) / len(val_accs)
+    std_val_acc = (sum((a - avg_val_acc) ** 2 for a in val_accs) / len(val_accs)) ** 0.5
+
+    print(f"\n{'='*60}", flush=True)
+    print(f"K-Fold Cross-Validation Results ({Config.N_FOLDS} folds)", flush=True)
+    print(f"{'='*60}", flush=True)
+    for k, r in enumerate(fold_results):
+        print(f"  Fold {k}: val_loss={r['best_val_loss']:.4f} val_acc={r['best_val_acc']:.4f}")
+    print(f"  Average: val_loss={avg_val_loss:.4f} val_acc={avg_val_acc:.4f} ± {std_val_acc:.4f}")
+    print(f"{'='*60}", flush=True)
+
+    return {
+        "fold_results": fold_results,
+        "avg_val_loss": avg_val_loss,
+        "avg_val_acc": avg_val_acc,
+        "std_val_acc": std_val_acc,
+        "n_folds": Config.N_FOLDS,
     }
 
 if __name__ == "__main__":
-    run_training()
+    import sys
+    if "--kfold" in sys.argv:
+        run_kfold()
+    else:
+        run_training()
