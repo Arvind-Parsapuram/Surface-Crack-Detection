@@ -74,6 +74,25 @@ def get_efficientnet_b0(num_classes=4, pretrained=True, freeze_backbone=True):
     return model
 
 
+def get_mobilenet_v3_small(num_classes=4, pretrained=True, freeze_backbone=True):
+    """Lightweight MobileNetV3-Small — ideal student for knowledge distillation."""
+    weights = models.MobileNet_V3_Small_Weights.DEFAULT if pretrained else None
+    model = models.mobilenet_v3_small(weights=weights)
+
+    if freeze_backbone:
+        for param in model.parameters():
+            param.requires_grad = False
+
+    in_features = model.classifier[3].in_features
+    model.classifier = nn.Sequential(
+        nn.Linear(in_features, 128),
+        nn.ReLU(),
+        nn.Dropout(0.2),
+        nn.Linear(128, num_classes),
+    )
+    return model
+
+
 def get_vit_b_16(num_classes=4, pretrained=True, freeze_backbone=True):
     """Loads ViT-B/16 with custom classification head."""
     weights = models.ViT_B_16_Weights.DEFAULT if pretrained else None
@@ -108,6 +127,10 @@ def unfreeze_for_finetune(model, model_name):
         for name, param in model.named_parameters():
             if "encoder.ln" in name or "heads" in name:
                 param.requires_grad = True
+    elif model_name in ("mobilenet_v3_small",):
+        for name, param in model.named_parameters():
+            if "features.12" in name or "classifier" in name:
+                param.requires_grad = True
 
 
 def get_model(model_name="resnet50", num_classes=4, pretrained=True, freeze_backbone=True):
@@ -116,6 +139,7 @@ def get_model(model_name="resnet50", num_classes=4, pretrained=True, freeze_back
         "resnet50": get_resnet50,
         "efficientnet_b0": get_efficientnet_b0,
         "vit_b_16": get_vit_b_16,
+        "mobilenet_v3_small": get_mobilenet_v3_small,
     }
     builder = builders.get(model_name)
     if builder is None:

@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { Shield, LogOut, LayoutDashboard, ScanSearch, User } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,9 +19,28 @@ function initials(name: string) {
   return (a + b).toUpperCase() || "U";
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  loaded: "bg-green-500",
+  loading: "bg-yellow-500 animate-pulse",
+  unavailable: "bg-gray-500",
+  error: "bg-red-500",
+};
+
 export function TopNav() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [modelStatus, setModelStatus] = useState<string>("unavailable");
+  const [activeModel, setActiveModel] = useState<string>("");
+
+  useEffect(() => {
+    api
+      .modelStatus()
+      .then((r) => {
+        setModelStatus(r.status);
+        setActiveModel(r.active_model);
+      })
+      .catch(() => setModelStatus("unavailable"));
+  }, []);
 
   const handleSignOut = () => {
     signOut();
@@ -33,7 +54,16 @@ export function TopNav() {
           <div className="h-8 w-8 rounded-lg bg-gradient-primary flex items-center justify-center">
             <Shield className="h-4 w-4 text-white" strokeWidth={2.5} />
           </div>
-          <span className="font-semibold tracking-tight">CrackScan</span>
+          <div className="flex flex-col leading-tight">
+            <span className="font-semibold tracking-tight">CrackScan</span>
+            <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[modelStatus] ?? "bg-gray-500"}`}
+              />
+              {modelStatus}
+              {activeModel && <span className="ml-1 font-medium">{activeModel}</span>}
+            </span>
+          </div>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">
@@ -58,7 +88,7 @@ export function TopNav() {
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col">
                 <span className="text-sm font-medium truncate">{user?.full_name}</span>
-                <span className="text-xs text-muted-foreground truncate">{user?.email}</span>
+                <span className="text-xs text-muted-foreground truncate">{user?.username}</span>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
@@ -67,7 +97,10 @@ export function TopNav() {
                 <User className="mr-2 h-4 w-4" /> Profile
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
+            <DropdownMenuItem
+              onClick={handleSignOut}
+              className="text-destructive focus:text-destructive"
+            >
               <LogOut className="mr-2 h-4 w-4" /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>

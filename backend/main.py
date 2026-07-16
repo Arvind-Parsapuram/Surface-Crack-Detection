@@ -7,15 +7,22 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from jose import JWTError, jwt
 from dotenv import load_dotenv
+from fastapi.responses import FileResponse
+import os
 
 from backend.auth import (
     login_user,
     register_user,
-    send_reset_email,
     get_github_login_url,
     complete_github_login,
 )
-from backend.prediction import predict_image
+from backend.prediction import (
+    predict_image,
+    get_available_models,
+    select_model,
+    get_active_model_name,
+    get_active_model_status,
+)
 
 load_dotenv()
 
@@ -45,13 +52,6 @@ def root():
     <a href="/docs">API Documentation (Swagger UI)</a>
     <a href="/api/health">Health Check</a>
   </div>
-    <p style="margin-top:1.5rem;font-size:0.75rem;color:#4A4D62">
-    Open the app at <a href="http://localhost:5173" style="color:#6366F1;background:none;border:none;padding:0;display:inline;font-size:0.75rem;">http://localhost:5173</a>
-  </p>
-  <p style="margin-top:0.5rem;font-size:0.7rem;color:#3A3D52">
-    Terminal 1: python app.py (this server)<br>
-    Terminal 2: cd frontend && npm run dev
-  </p>
 </div></body></html>"""
     return HTMLResponse(html)
 
@@ -73,10 +73,10 @@ JWT_EXPIRATION_HOURS = 24
 security = HTTPBearer(auto_error=False)
 
 
-def create_jwt_token(user_id: str, email: str) -> str:
+def create_jwt_token(user_id: str, username: str) -> str:
     payload = {
         "sub": user_id,
-        "email": email,
+        "username": username,
         "iat": datetime.now(timezone.utc),
         "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS),
     }
@@ -96,25 +96,22 @@ def verify_token(credentials: HTTPAuthorizationCredentials | None = Depends(secu
 # --- Request / Response models ---
 
 class LoginRequest(BaseModel):
-    email: str
+    username: str
     password: str
 
 class RegisterRequest(BaseModel):
-    email: str
+    username: str
     password: str
     full_name: str
-
-class ForgotRequest(BaseModel):
-    email: str
 
 
 # --- Auth routes (always return 200; body.success tells the real outcome) ---
 
 @app.post("/api/auth/login")
 def login_route(req: LoginRequest):
-    result = login_user(req.email, req.password)
+    result = login_user(req.username, req.password)
     if result["success"]:
-        token = create_jwt_token(result["user"]["id"], result["user"]["email"])
+        token = create_jwt_token(result["user"]["id"], result["user"]["username"])
         return {
             "success": True,
             "access_token": token,
@@ -128,12 +125,7 @@ def login_route(req: LoginRequest):
 
 @app.post("/api/auth/register")
 def register_route(req: RegisterRequest):
-    return register_user(req.email, req.password, req.full_name)
-
-
-@app.post("/api/auth/forgot-password")
-def forgot_route(req: ForgotRequest):
-    return send_reset_email(req.email)
+    return register_user(req.username, req.password, req.full_name)
 
 
 @app.get("/api/auth/github")
@@ -149,7 +141,7 @@ def github_start(redirect_to: str = Query(...)):
 def github_callback(code: str = Query(...)):
     try:
         result = complete_github_login(code)
-        token = create_jwt_token(result["user"]["id"], result["user"]["email"])
+        token = create_jwt_token(result["user"]["id"], result["user"]["username"])
         return {
             "success": True,
             "access_token": token,
@@ -180,6 +172,79 @@ async def predict_route(
         raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
 
 
+@app.get("/api/model/status")
+def model_status():
+    return {
+        "status": get_active_model_status(),
+        "active_model": get_active_model_name(),
+    }
+
+
+@app.get("/api/models")
+def list_models():
+    return {"models": get_available_models()}
+
+
+@app.post("/api/model/select")
+def select_model_route(req: dict):
+    model_name = req.get("model_name")
+    if not model_name:
+        return {"success": False, "message": "model_name required"}
+    return select_model(model_name)
+
+
+@app.get("/api/model/debug")
+def model_debug():
+    import pathlib
+    info = {
+        "model_status": get_active_model_status(),
+        "active_model": get_active_model_name(),
+        "available_models": get_available_models(),
+        "models_dir_exists": os.path.isdir("models"),
+        "models_dir_files": os.listdir("models") if os.path.isdir("models") else [],
+    }
+    cfg = {}
+    try:
+        from src.config import Config
+        cfg["model_name"] = Config.MODEL_NAME
+        cfg["expected_path"] = Config.get_model_path(model_name=Config.MODEL_NAME)
+        cfg["device"] = str(getattr(Config, "DEVICE", "N/A"))
+    except Exception as e:
+        cfg["error"] = str(e)
+    info["config"] = cfg
+    hf = {}
+    try:
+        cache_dir = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
+        hf["cache_dir"] = str(cache_dir)
+        hf["cache_exists"] = cache_dir.is_dir()
+        if cache_dir.is_dir():
+            hf["cache_contents"] = os.listdir(str(cache_dir))
+    except Exception as e:
+        hf["error"] = str(e)
+    info["huggingface"] = hf
+    ml = {}
+    try:
+        import torch
+        ml["torch_version"] = torch.__version__
+        ml["cuda_available"] = torch.cuda.is_available()
+        ml["device_count"] = torch.cuda.device_count() if torch.cuda.is_available() else 0
+    except Exception as e:
+        ml["error"] = str(e)
+    info["ml"] = ml
+    return info
+
+
 @app.get("/api/health")
 def health():
     return {"status": "ok"}
+
+@app.get("/api/report")
+def download_report(path: str):
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    return FileResponse(
+        path,
+        media_type="application/pdf",
+        filename=os.path.basename(path),
+    )

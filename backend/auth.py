@@ -1,48 +1,67 @@
 import os
-import uuid as _uuid
-from backend.database import get_supabase
+from typing import Any
+import bcrypt
+
+from backend.database import get_supabase, get_service_client
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@surfacedetection.com")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "Admin@123")
-ADMIN_NAME = os.getenv("ADMIN_NAME", "Admin")
 
-def register_user(email: str, password: str, full_name: str) -> dict:
-    return {
-        "success": True,
-        "message": "Registration successful. You can now log in.",
-        "access_token": None,
-        "user": {"id": str(_uuid.uuid4()), "email": email, "full_name": full_name},
-    }
+def register_user(username: str, password: str, full_name: str) -> dict:
+    supabase = get_service_client()
+    try:
+        password_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        result = supabase.table("users").insert({
+            "username": username,
+            "password_hash": password_hash,
+            "full_name": full_name,
+        }).execute()
+        user = result.data[0]
+        return {
+            "success": True,
+            "message": "Registration successful. You can now log in.",
+            "access_token": None,
+            "user": {
+                "id": user["id"],
+                "username": user["username"],
+                "full_name": user["full_name"],
+            },
+        }
+    except Exception as e:
+        msg = str(e)
+        if "duplicate key" in msg.lower() or "already exists" in msg.lower():
+            return {"success": False, "message": "Username already taken."}
+        return {"success": False, "message": f"Registration failed: {msg}"}
 
 
-def login_user(email: str, password: str) -> dict:
-    if email == ADMIN_EMAIL and password == ADMIN_PASSWORD:
+def login_user(username: str, password: str) -> dict:
+    supabase = get_service_client()
+    try:
+        result = supabase.table("users").select("*").eq("username", username).execute()
+        if not result.data:
+            return {"success": False, "message": "Invalid username or password"}
+        user = result.data[0]
+        if user.get("password_hash") is None:
+            return {"success": False, "message": "This account uses GitHub login. Sign in with GitHub."}
+        if not bcrypt.checkpw(password.encode(), user["password_hash"].encode()):
+            return {"success": False, "message": "Invalid username or password"}
         return {
             "success": True,
             "message": "Login successful",
-            "access_token": "hardcoded-admin-token",
+            "access_token": None,
             "user": {
-                "id": str(_uuid.uuid4()),
-                "email": ADMIN_EMAIL,
-                "full_name": ADMIN_NAME,
+                "id": user["id"],
+                "username": user["username"],
+                "full_name": user["full_name"],
             },
         }
-    return {"success": False, "message": "Invalid email or password"}
-
-
-def send_reset_email(email: str) -> dict:
-    return {"success": True, "message": "Password reset link sent to your email."}
-
+    except Exception as e:
+        return {"success": False, "message": "Invalid username or password"}
 
 
 def get_github_login_url(redirect_to: str) -> str:
-    """Returns the URL to send the user to, to start GitHub login via Supabase.
-    redirect_to = the page in your app Supabase should send the user back to
-    after they approve on GitHub (e.g. your Space's live URL)."""
     supabase = get_supabase()
     res = supabase.auth.sign_in_with_oauth({
         "provider": "github",
@@ -52,17 +71,32 @@ def get_github_login_url(redirect_to: str) -> str:
 
 
 def complete_github_login(auth_code: str) -> dict:
-    """Call this after GitHub/Supabase redirects back with ?code=... in the URL.
-    Exchanges that code for a real logged-in session."""
     supabase = get_supabase()
     session = supabase.auth.exchange_code_for_session({"auth_code": auth_code})
+    gh_user = session.user
+    gh_id = gh_user.id
+    username = gh_user.user_metadata.get("user_name") or gh_user.email.split("@")[0]
+    full_name = gh_user.user_metadata.get("full_name") or ""
+
+    # Use service client for table writes
+    service = get_service_client()
+    existing = service.table("users").select("*").eq("github_id", gh_id).execute()
+    if existing.data:
+        user = existing.data[0]
+    else:
+        result = service.table("users").insert({
+            "username": username,
+            "full_name": full_name,
+            "github_id": gh_id,
+        }).execute()
+        user = result.data[0]
+
     return {
         "success": True,
         "access_token": session.session.access_token,
         "user": {
-            "id": session.user.id,
-            "email": session.user.email,
-            "full_name": session.user.user_metadata.get("full_name")
-                or session.user.user_metadata.get("user_name"),  # GitHub username fallback
+            "id": user["id"],
+            "username": user["username"],
+            "full_name": user["full_name"],
         },
     }

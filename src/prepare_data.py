@@ -1,7 +1,7 @@
 import os
 import shutil
 from src.config import Config
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedShuffleSplit, StratifiedKFold
 
 def _collect_images(raw_dir):
     """Collect all image paths and class labels from data/raw/."""
@@ -19,6 +19,34 @@ def _collect_images(raw_dir):
         all_labels.extend([class_idx] * len(images))
         label_names.extend([class_name] * len(images))
     return all_images, all_labels, label_names
+
+def generate_kfold_splits():
+    """Generate K stratified folds for cross-validation."""
+    from collections import defaultdict
+
+    images, labels, _ = _collect_images(Config.RAW_DATA_DIR)
+    if len(images) == 0:
+        print("No images found in raw data directory.")
+        return
+
+    skf = StratifiedKFold(n_splits=Config.N_FOLDS, shuffle=True, random_state=42)
+
+    for fold, (train_idx, val_idx) in enumerate(skf.split(images, labels)):
+        fold_dir = os.path.join(Config.KFOLD_DIR, f"fold_{fold}")
+        for split_name in ("train", "val"):
+            for class_name in Config.CLASSES:
+                os.makedirs(os.path.join(fold_dir, split_name, class_name), exist_ok=True)
+
+        for split_name, indices in [("train", train_idx), ("val", val_idx)]:
+            for idx in indices:
+                img_path = images[idx]
+                class_name = Config.CLASSES[labels[idx]]
+                dest = os.path.join(fold_dir, split_name, class_name, os.path.basename(img_path))
+                shutil.copy(img_path, dest)
+
+        print(f"  Fold {fold}: train={len(train_idx)} val={len(val_idx)}")
+
+    print(f"Generated {Config.N_FOLDS} stratified folds in {Config.KFOLD_DIR}")
 
 def prepare_data():
     """Splits raw dataset in data/raw into train/val/test directories (stratified)."""
@@ -68,4 +96,8 @@ def prepare_data():
         print(f"  {split_name}: {counts}")
 
 if __name__ == "__main__":
-    prepare_data()
+    import sys
+    if "--kfold" in sys.argv:
+        generate_kfold_splits()
+    else:
+        prepare_data()

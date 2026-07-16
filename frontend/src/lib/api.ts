@@ -5,7 +5,7 @@ export const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/,
 
 export interface AuthUser {
   id: string;
-  email: string;
+  username: string;
   full_name: string;
 }
 
@@ -14,6 +14,13 @@ export interface AuthSuccess {
   access_token: string;
   user: AuthUser;
 }
+
+export interface AuthError {
+  success: false;
+  message: string;
+}
+
+export type AuthResult = AuthSuccess | AuthError;
 
 export interface RegisterSuccess {
   success: true;
@@ -38,6 +45,7 @@ export interface PredictionResult {
   severity_label: SeverityLabel;
   repair_cost: { low: number; high: number; display: string; currency: string };
   repair_time: { low: number; high: number; display: string; unit: string };
+  pdf_path?: string;
 }
 
 export class ApiError extends Error {
@@ -92,7 +100,10 @@ async function apiFetch<T>(path: string, opts: FetchOpts = {}): Promise<T> {
 
   if (!res.ok) {
     const message =
-      (json && typeof json === "object" && "message" in json && typeof (json as { message: unknown }).message === "string"
+      (json &&
+      typeof json === "object" &&
+      "message" in json &&
+      typeof (json as { message: unknown }).message === "string"
         ? (json as { message: string }).message
         : null) ??
       (json && typeof json === "object" && "detail" in json
@@ -106,27 +117,51 @@ async function apiFetch<T>(path: string, opts: FetchOpts = {}): Promise<T> {
   return json as T;
 }
 
-export const api = {
-  login: (email: string, password: string) =>
-    apiFetch<AuthSuccess>("/api/auth/login", { body: { email, password } }),
+export interface ModelInfo {
+  name: string;
+  display_name: string;
+  size_mb: number;
+  is_loaded: boolean;
+  is_active: boolean;
+  status: string;
+}
 
-  register: (email: string, password: string, full_name: string) =>
+export interface ModelStatus {
+  status: string;
+  active_model: string;
+}
+
+export interface ModelsResponse {
+  models: ModelInfo[];
+}
+
+export interface SelectModelResponse {
+  success: boolean;
+  active_model?: string;
+  status?: string;
+  message?: string;
+}
+
+export const api = {
+  modelStatus: () => apiFetch<ModelStatus>("/api/model/status"),
+  getModels: () => apiFetch<ModelsResponse>("/api/models"),
+  selectModel: (model_name: string) =>
+    apiFetch<SelectModelResponse>("/api/model/select", {
+      body: { model_name },
+    }),
+  login: (username: string, password: string) =>
+    apiFetch<AuthResult>("/api/auth/login", { body: { username, password } }),
+
+  register: (username: string, password: string, full_name: string) =>
     apiFetch<RegisterSuccess>("/api/auth/register", {
-      body: { email, password, full_name },
+      body: { username, password, full_name },
     }),
 
-  forgotPassword: (email: string) =>
-    apiFetch<MessageSuccess>("/api/auth/forgot-password", { body: { email } }),
-
   githubStart: (redirectTo: string) =>
-    apiFetch<{ url: string }>(
-      `/api/auth/github?redirect_to=${encodeURIComponent(redirectTo)}`,
-    ),
+    apiFetch<{ url: string }>(`/api/auth/github?redirect_to=${encodeURIComponent(redirectTo)}`),
 
   githubCallback: (code: string) =>
-    apiFetch<AuthSuccess>(
-      `/api/auth/github/callback?code=${encodeURIComponent(code)}`,
-    ),
+    apiFetch<AuthSuccess>(`/api/auth/github/callback?code=${encodeURIComponent(code)}`),
 
   predict: (file: File, token: string) => {
     const fd = new FormData();
