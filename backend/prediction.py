@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 from backend.pdf_generator import generate_pdf
 from backend.cost import estimate_repair_cost, estimate_repair_time
+from backend.actions import get_action_plan
 
 logger = logging.getLogger(__name__)
 
@@ -259,14 +260,19 @@ def predict_image(image_bytes: bytes, filename: str = "upload.jpg") -> dict:
         "severity_label": severity_label,
     }
 
+    # Only estimate cost/time if we have a real prediction
+    # Only estimate cost/time/action if we have a real prediction
     if predicted_class in CLASS_SEVERITY:
         cost_estimate = estimate_repair_cost(predicted_class, severity_label, confidence)
         time_estimate = estimate_repair_time(predicted_class, severity_label, confidence)
+        action_plan = get_action_plan(predicted_class, severity_label)
         result["repair_cost"] = cost_estimate
         result["repair_time"] = time_estimate
+        result["action_plan"] = action_plan
     else:
         result["repair_cost"] = None
         result["repair_time"] = None
+        result["action_plan"] = None
 
 
     pdf_path = generate_pdf(
