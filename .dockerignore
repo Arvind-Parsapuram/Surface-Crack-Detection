@@ -18,3 +18,4 @@ docs/
 # Models (downloaded at runtime via HF Hub)
 models/
 data/
+Surface-Crack-Detection/
