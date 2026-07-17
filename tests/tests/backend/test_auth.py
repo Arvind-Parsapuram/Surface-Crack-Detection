@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 import bcrypt
 import pytest
 
-from backend.auth import login_user, register_user, complete_github_login, get_github_login_url
+from backend.auth import login_user, register_user
 
 
 @pytest.fixture(autouse=True)
@@ -24,7 +24,6 @@ def _fake_user(username="testuser", uid="00000000-0000-0000-0000-000000000001", 
         "username": username,
         "full_name": full_name,
         "password_hash": pwhash,
-        "github_id": None,
     }
 
 
@@ -101,48 +100,4 @@ class TestLogin:
         )
         result = login_user(username="ghuser", password="anything")
         assert result["success"] is False
-        assert "GitHub" in result["message"]
-
-
-class TestGitHub:
-    def test_get_url_calls_supabase_oauth(self, mock_db):
-        supabase, _ = mock_db
-        supabase.auth.sign_in_with_oauth.return_value = MagicMock(url="https://github.com/login/oauth/authorize?...")
-        url = get_github_login_url("https://app.com/callback")
-        assert url.startswith("https://github.com")
-
-    def test_complete_login_creates_new_user(self, mock_db):
-        supabase, service = mock_db
-        supabase.auth.exchange_code_for_session.return_value = MagicMock(
-            user=MagicMock(
-                id="gh-123",
-                email="gh@user.com",
-                user_metadata={"user_name": "octocat", "full_name": "Octo Cat"},
-            ),
-            session=MagicMock(access_token="gh-token"),
-        )
-        service.table("users").select("*").eq("github_id", "gh-123").execute.return_value = MagicMock(data=[])
-        service.table("users").insert().execute.return_value = MagicMock(
-            data=[_fake_user(username="octocat", uid="new-uuid", full_name="Octo Cat")],
-        )
-        result = complete_github_login("auth-code-123")
-        assert result["success"] is True
-        assert result["user"]["username"] == "octocat"
-        assert result["user"]["full_name"] == "Octo Cat"
-
-    def test_complete_login_finds_existing_user(self, mock_db):
-        supabase, service = mock_db
-        supabase.auth.exchange_code_for_session.return_value = MagicMock(
-            user=MagicMock(
-                id="gh-456",
-                email="returning@user.com",
-                user_metadata={"user_name": "returninguser", "full_name": "Returning User"},
-            ),
-            session=MagicMock(access_token="gh-token"),
-        )
-        service.table("users").select("*").eq("github_id", "gh-456").execute.return_value = MagicMock(
-            data=[_fake_user(username="returninguser", uid="existing-uuid", full_name="Returning User")],
-        )
-        result = complete_github_login("auth-code-456")
-        assert result["success"] is True
-        assert result["user"]["id"] == "existing-uuid"
+        assert result["message"] == "Invalid username or password"

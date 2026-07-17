@@ -4,6 +4,7 @@ import { ScanSearch, TrendingUp, Activity, AlertTriangle, ArrowRight } from "luc
 
 
 import { useAuth, getHistory, type HistoryEntry } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SeverityBadge } from "@/components/SeverityBadge";
@@ -42,9 +43,11 @@ function Dashboard() {
   const { user } = useAuth();
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showPersonal, setShowPersonal] = useState(false);
+  const [publicData, setPublicData] = useState<{ defect: string; count: number }[]>([]);
 
   useEffect(() => {
     if (user) setHistory(getHistory(user.id));
+    api.statsOverview().then((res) => setPublicData(res.defect_distribution)).catch(() => {});
   }, [user]);
 
   const total = history.length;
@@ -71,16 +74,9 @@ function Dashboard() {
     }));
 }, [history]);
 
-  const publicHistogram = [
-    { defect: "Cracks", count: 42 },
-    { defect: "Patch", count: 19 },
-    { defect: "Potholes", count: 96 },
-    { defect: "Surface Defects", count: 28 },
-  ];
-
   const chartData = showPersonal
     ? personalHistogram
-    : publicHistogram;
+    : publicData;
 
   const chartTitle = showPersonal
       ? "Personal Comparison"
@@ -133,7 +129,7 @@ function Dashboard() {
           <div>
             <h2 className="text-lg font-semibold">{chartTitle}</h2>
             <p className="text-sm text-muted-foreground">
-              {showPersonal ? "Showing your prediction history" : "Showing public benchmark data"}
+              {showPersonal ? "Showing your prediction history" : "Defect distribution across the benchmark dataset (306 images)"}
             </p>
           </div>
 

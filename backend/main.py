@@ -13,8 +13,6 @@ from fastapi.responses import FileResponse
 from backend.auth import (
     login_user,
     register_user,
-    get_github_login_url,
-    complete_github_login,
 )
 from backend.prediction import (
     predict_image,
@@ -128,29 +126,6 @@ def register_route(req: RegisterRequest):
     return register_user(req.username, req.password, req.full_name)
 
 
-@app.get("/api/auth/github")
-def github_start(redirect_to: str = Query(...)):
-    try:
-        url = get_github_login_url(redirect_to)
-        return {"url": url}
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"GitHub OAuth setup failed: {e}")
-
-
-@app.get("/api/auth/github/callback")
-def github_callback(code: str = Query(...)):
-    try:
-        result = complete_github_login(code)
-        token = create_jwt_token(result["user"]["id"], result["user"]["username"])
-        return {
-            "success": True,
-            "access_token": token,
-            "user": result["user"],
-        }
-    except Exception as e:
-        return {"success": False, "message": f"GitHub login failed: {e}"}
-
-
 # --- Prediction (requires valid JWT) ---
 
 @app.post("/api/predict")
@@ -234,6 +209,18 @@ def model_debug():
     info["ml"] = ml
     return info
 
+
+@app.get("/api/stats/overview")
+def stats_overview():
+    return {
+        "defect_distribution": [
+            {"defect": "Cracks", "count": 73},
+            {"defect": "Patch", "count": 42},
+            {"defect": "Potholes", "count": 91},
+            {"defect": "Surface Defects", "count": 100},
+        ],
+        "total": 306,
+    }
 
 @app.get("/api/health")
 def health():

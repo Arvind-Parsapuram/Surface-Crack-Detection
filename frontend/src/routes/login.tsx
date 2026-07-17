@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Github, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 import { AuthCard } from "@/components/AuthCard";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,6 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
   const [submitting, setSubmitting] = useState(false);
-  const [githubLoading, setGithubLoading] = useState(false);
 
   useEffect(() => {
     if (isReady && isAuthenticated) navigate({ to: "/dashboard", replace: true });
@@ -70,20 +69,6 @@ function LoginPage() {
       toast.error(err instanceof ApiError ? err.message : "Sign in failed");
     } finally {
       setSubmitting(false);
-    }
-  };
-
-  const onGithub = async () => {
-    setGithubLoading(true);
-    try {
-      const redirect =
-        import.meta.env.VITE_GITHUB_OAUTH_REDIRECT ||
-        `${window.location.origin}/auth/github/callback`;
-      const { url } = await api.githubStart(redirect);
-      window.location.href = url;
-    } catch (err) {
-      setGithubLoading(false);
-      toast.error(err instanceof ApiError ? err.message : "GitHub sign in failed");
     }
   };
 
@@ -130,31 +115,6 @@ function LoginPage() {
           className="w-full bg-gradient-primary hover:opacity-90 text-white border-0"
         >
           {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign In"}
-        </Button>
-
-        <div className="relative py-2">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t border-border" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-card px-2 text-muted-foreground">or continue with</span>
-          </div>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onGithub}
-          disabled={githubLoading}
-          className="w-full"
-        >
-          {githubLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              <Github className="h-4 w-4 mr-2" /> GitHub
-            </>
-          )}
         </Button>
       </form>
     </AuthCard>

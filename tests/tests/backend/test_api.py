@@ -23,16 +23,6 @@ _mock_service.table.return_value = _table_mock
 # Default: empty result for users table queries
 _query_mock.execute.return_value = MagicMock(data=[])
 
-# GitHub OAuth mocks (used by complete_github_login)
-_mock_supabase.auth.exchange_code_for_session.return_value = MagicMock(
-    user=MagicMock(
-        id="gh-uid",
-        email="gh@user.com",
-        user_metadata={"user_name": "ghuser", "full_name": "GH User"},
-    ),
-    session=MagicMock(access_token="gh-token"),
-)
-
 patch("backend.database.get_supabase", return_value=_mock_supabase).start()
 patch("backend.database.get_service_client", return_value=_mock_service).start()
 
@@ -47,7 +37,6 @@ def _fake_user(username="testuser", uid="uid-1", full_name="Test User", pwhash=N
         "username": username,
         "full_name": full_name,
         "password_hash": pwhash,
-        "github_id": None,
     }
 
 
@@ -139,24 +128,18 @@ class TestForgotPassword:
         assert r.status_code == 404
 
 
-class TestGitHub:
-    def test_github_url_missing_param(self):
-        r = client.get("/api/auth/github")
-        assert r.status_code == 422
-
-    def test_github_callback_no_code(self):
-        r = client.get("/api/auth/github/callback")
-        assert r.status_code == 422
-
-    def test_github_callback_success(self):
-        _set_query_result([])
-        _set_insert_result([_fake_user(username="ghuser", uid="gh-uuid", full_name="GH User")])
-        r = client.get("/api/auth/github/callback?code=some-code")
+class TestStats:
+    def test_stats_overview(self):
+        r = client.get("/api/stats/overview")
         assert r.status_code == 200
         body = r.json()
-        assert body["success"] is True
-        assert isinstance(body["access_token"], str) and len(body["access_token"]) > 0
-        assert body["user"]["username"] == "ghuser"
+        assert "defect_distribution" in body
+        assert body["total"] == 306
+        classes = [d["defect"] for d in body["defect_distribution"]]
+        assert "Cracks" in classes
+        assert "Patch" in classes
+        assert "Potholes" in classes
+        assert "Surface Defects" in classes
 
 
 class TestPredict:

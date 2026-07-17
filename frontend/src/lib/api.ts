@@ -157,6 +157,9 @@ export interface SelectModelResponse {
 }
 
 export const api = {
+  statsOverview: () =>
+    apiFetch<{ defect_distribution: { defect: string; count: number }[]; total: number }>("/api/stats/overview"),
+
   modelStatus: () => apiFetch<ModelStatus>("/api/model/status"),
   getModels: () => apiFetch<ModelsResponse>("/api/models"),
   selectModel: (model_name: string) =>
@@ -170,12 +173,6 @@ export const api = {
     apiFetch<RegisterSuccess>("/api/auth/register", {
       body: { username, password, full_name },
     }),
-
-  githubStart: (redirectTo: string) =>
-    apiFetch<{ url: string }>(`/api/auth/github?redirect_to=${encodeURIComponent(redirectTo)}`),
-
-  githubCallback: (code: string) =>
-    apiFetch<AuthSuccess>(`/api/auth/github/callback?code=${encodeURIComponent(code)}`),
 
   predict: (file: File, token: string, currency: string = "USD") => {
     const fd = new FormData();
