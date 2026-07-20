@@ -1,24 +1,11 @@
----
-title: Surface Crack Detection
-emoji: 🚀
-colorFrom: red
-colorTo: red
-sdk: docker
-pinned: false
----
 
 # 🛣️ Surface Crack Detection
 
 AI-powered detection of road & bridge surface defects using deep learning.
 
-**Live demo:** [huggingface.co/spaces/amruthjakku/surface-crack-detection](https://huggingface.co/spaces/amruthjakku/surface-crack-detection)
-
-![Demo](docs/demo.gif)
-
-<!-- Replace docs/demo.gif with an actual screen recording of the app in action -->
+![Demo](Documentation/demo.gif)
 
 ---
-
 ## What it does
 
 A multi-class image classifier that detects **4 types of surface defects** — cracks, patches, potholes, and general surface defects — using transfer learning (ResNet50, EfficientNet-B0, ViT-B/16) with optional ensemble inference.
@@ -151,4 +138,4 @@ python src/evaluate.py
 
 ---
 
-Built by **Team 7 — ACE Bootcamp**
+Built by **Team 7 — ACE Bootcamp/Arvind**
